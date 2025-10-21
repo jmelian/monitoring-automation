@@ -1,0 +1,118 @@
+{
+  "identification": {
+    "service_name": "Aplicación Web Demo",
+    "service_desc": "Aplicación web de demostración con Django y PostgreSQL",
+    "priority": "Media"
+  },
+  "tech_stack": [
+    {
+      "technology": "Django",
+      "version": "4.2.3"
+    },
+    {
+      "technology": "Nginx",
+      "version": "1.24"
+    },
+    {
+      "technology": "PostgreSQL",
+      "version": "15"
+    }
+  ],
+  "responsables": [
+    {
+      "nombre": "Admin Sistema",
+      "email": "admin@example.com"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "Base de datos PostgreSQL",
+      "type": "Base de datos",
+      "nature": "Interna",
+      "impact": "Alto",
+      "port": "5432",
+      "check_protocol": "tcp",
+      "effect": "La aplicación no puede almacenar/recuperar datos",
+      "affected_services": [
+        "API",
+        "Web Interface"
+      ]
+    },
+    {
+      "name": "API Health Check",
+      "type": "API interna",
+      "nature": "Interna",
+      "impact": "Crítico",
+      "port": "",
+      "check_protocol": "http",
+      "effect": "No se puede verificar el estado del servicio",
+      "affected_services": [
+        "Monitoring"
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "name": "django_app.log",
+      "path": "/var/log/django/app.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "100MB, 5 backups",
+      "patterns": [
+        "[TIMESTAMP] LEVEL [MODULE:LINE] FUNCTION - MESSAGE"
+      ]
+    },
+    {
+      "name": "nginx_access.log",
+      "path": "/var/log/nginx/access.log",
+      "format": "Texto plano simple",
+      "retention_method": "tiempo",
+      "retention_value": "30 dias",
+      "patterns": [
+        "IP - - [TIMESTAMP] \"METHOD PATH HTTP/VERSION\" STATUS_CODE BYTES \"REFERER\" \"USER_AGENT\""
+      ]
+    }
+  ],
+  "centralized_logs": "Sí",
+  "health_api": true,
+  "health_api_details": {
+    "endpoint": "http://localhost:8000/api/health/",
+    "format": "JSON",
+    "fields": ["status", "database", "cache"],
+    "auth": "none",
+    "interval_sec": 60
+  },
+  "envs": [
+    {
+      "name": "PROD",
+      "desc": "Entorno de producción",
+      "location": "Data Center Principal",
+      "hosts": [
+        {
+          "type": "container",
+          "identifier": "web-app-prod"
+        },
+        {
+          "type": "container",
+          "identifier": "db-prod"
+        }
+      ]
+    },
+    {
+      "name": "STAGING",
+      "desc": "Entorno de staging",
+      "location": "Data Center Secundario",
+      "hosts": [
+        {
+          "type": "container",
+          "identifier": "web-app-staging"
+        },
+        {
+          "type": "container",
+          "identifier": "db-staging"
+        }
+      ]
+    }
+  ],
+  "notes": "Configuración de ejemplo para el sistema de automatización de monitorización"
+}

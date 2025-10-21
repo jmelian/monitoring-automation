@@ -1,0 +1,115 @@
+# Configuración de Infraestructura de Monitorización
+# Archivo de ejemplo - COPIAR a config.yml y personalizar con datos reales
+# Este archivo contiene datos ficticios para desarrollo/pruebas
+
+# Configuración de Nagios
+nagios:
+  server:
+    host: "nagios.example.com"
+    port: 22
+    user: "monitor"
+    key_path: "~/.ssh/monitoring_key"
+    config_dir: "/etc/nagios/objects/"
+    backup_dir: "/etc/nagios/backup/"
+    sudo_required: true
+
+  # Configuración de checks
+  check_commands:
+    timeout: 30
+    retries: 3
+    interval: 300
+
+# Configuración de Elastic Stack
+elastic:
+  elasticsearch:
+    hosts:
+      - "elasticsearch1.example.com:9200"
+      - "elasticsearch2.example.com:9200"
+      - "elasticsearch3.example.com:9200"
+    auth:
+      user: "elastic"
+      password: "${ELASTIC_PASSWORD}"  # Variable de entorno
+    ssl_verify: true
+    timeout: 30
+
+  kibana:
+    host: "kibana.example.com"
+    port: 5601
+    auth:
+      user: "kibana_user"
+      password: "${KIBANA_PASSWORD}"
+    ssl_verify: true
+
+  logstash:
+    host: "logstash.example.com"
+    port: 5044
+    config_dir: "/etc/logstash/conf.d/"
+    reload_config: true
+
+  filebeat:
+    targets: []
+    # Se configura dinámicamente basado en los hosts del servicio
+    global_config:
+      prospectors_timeout: 10
+      spool_size: 2048
+
+# Configuración general del sistema
+general:
+  backup_before_deploy: true
+  validate_after_deploy: true
+  dry_run: false
+  log_level: "INFO"
+  notification_email: "admin@example.com"
+  temp_dir: "/tmp/monitoring_deploy"
+
+# Configuración por entorno
+environments:
+  production:
+    nagios_contact_group: "prod_admins"
+    elastic_index_prefix: "prod-"
+    alert_severity: "high"
+    backup_retention_days: 30
+    monitoring_interval: 60
+
+  staging:
+    nagios_contact_group: "dev_team"
+    elastic_index_prefix: "staging-"
+    alert_severity: "medium"
+    backup_retention_days: 7
+    monitoring_interval: 300
+
+  development:
+    nagios_contact_group: "developers"
+    elastic_index_prefix: "dev-"
+    alert_severity: "low"
+    backup_retention_days: 1
+    monitoring_interval: 600
+
+# Configuración de seguridad
+security:
+  ssh_key_passphrase: null  # Si las claves tienen passphrase
+  sudo_password: null       # Si se requiere sudo
+  vault_enabled: false      # Para integración con HashiCorp Vault
+  secrets_backend: "env"    # env, vault, aws_secrets, azure_keyvault
+
+# Configuración de notificaciones
+notifications:
+  email:
+    enabled: true
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    use_tls: true
+    from_address: "monitoring@example.com"
+
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#monitoring-alerts"
+
+# Configuración de logging del sistema de despliegue
+logging:
+  level: "INFO"
+  file: "logs/deployment.log"
+  max_size: "10MB"
+  backups: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

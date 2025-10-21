@@ -1,0 +1,172 @@
+{
+  "identification": {
+    "service_name": "Gestión de formación",
+    "service_desc": "Plataforma de gestión de formación",
+    "priority": "Baja"
+  },
+  "tech_stack": [
+    {
+      "technology": "Django",
+      "version": "5.2.3"
+    },
+    {
+      "technology": "Nginx",
+      "version": "latest"
+    },
+    {
+      "technology": "PostgreSQL",
+      "version": "17"
+    }
+  ],
+  "responsables": [
+    {
+      "nombre": "Javier Melián",
+      "email": "jmelher@contactel.es"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "LDAP",
+      "type": "Autenticación",
+      "nature": "Externa",
+      "impact": "Alto",
+      "port": "5032",
+      "check_protocol": "tcp",
+      "effect": "Usuarios no pueden autentificarse",
+      "affected_services": [
+        "Core"
+      ]
+    },
+    {
+      "name": "Base de datos",
+      "type": "Base de datos",
+      "nature": "Interna",
+      "impact": "Crítico",
+      "port": "8082",
+      "check_protocol": "tcp",
+      "effect": "",
+      "affected_services": []
+    },
+    {
+      "name": "Django",
+      "type": "API interna",
+      "nature": "Interna",
+      "impact": "Crítico",
+      "port": "",
+      "check_protocol": "",
+      "effect": "",
+      "affected_services": []
+    }
+  ],
+  "logs": [
+    {
+      "name": "formacion.log",
+      "path": "logs/formacion.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "10MB, 5 backups",
+      "patterns": [
+        "[TIMESTAMP] LEVEL [MODULE:LINE] FUNCTION - User:USERNAME IP:IP_ADDRESS Action:ACTION Resource:RESOURCE - MESSAGE"
+      ]
+    },
+    {
+      "name": "security.log",
+      "path": "logs/security.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "10MB, 10 backups",
+      "patterns": [
+        "[SECURITY] TIMESTAMP LEVEL - User:USERNAME IP:IP_ADDRESS Action:ACTION MESSAGE"
+      ]
+    },
+    {
+      "name": "business.log",
+      "path": "logs/business.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "10MB, 5 backups",
+      "patterns": [
+        "[BUSINESS] TIMESTAMP LEVEL - User:USERNAME Action:ACTION Resource:RESOURCE MESSAGE"
+      ]
+    },
+    {
+      "name": "anomaly.log",
+      "path": "logs/anomaly.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "10MB, 5 backups",
+      "patterns": [
+        "[ANOMALY] TIMESTAMP LEVEL - Pattern:PATTERN Severity:SEVERITY MESSAGE"
+      ]
+    },
+    {
+      "name": "performance.log",
+      "path": "logs/performance.log",
+      "format": "Texto plano simple",
+      "retention_method": "tamano",
+      "retention_value": "10MB, 5 backups",
+      "patterns": [
+        "[PERFORMANCE] TIMESTAMP LEVEL - User:USERNAME Action:ACTION Duration:DURATION DB_Queries:QUERIES MESSAGE"
+      ]
+    },
+    {
+      "name": "formacion.json",
+      "path": "logs/formacion.json",
+      "format": "JSON estructurado",
+      "retention_method": "tamano",
+      "retention_value": "20MB, 3 backups",
+      "patterns": [
+        "{\"timestamp\": \"TIMESTAMP\"",
+        "\"level\": \"LEVEL\"",
+        "\"logger\": \"MODULE\"",
+        "\"line\": LINE",
+        "\"function\": \"FUNCTION\"",
+        "\"message\": \"MESSAGE\"",
+        "\"user\": \"USERNAME\"",
+        "\"ip\": \"IP_ADDRESS\"",
+        "\"method\": \"METHOD\"",
+        "\"path\": \"PATH\"",
+        "\"status_code\": CODE",
+        "\"duration\": \"DURATION\"",
+        "\"db_queries\": QUERIES",
+        "\"db_time\": \"DB_TIME\"",
+        "\"action\": \"ACTION\"",
+        "\"resource\": \"RESOURCE\"",
+        "\"pattern\": \"PATTERN\"",
+        "\"severity\": \"SEVERITY\"}"
+      ]
+    }
+  ],
+  "centralized_logs": "Sí",
+  "health_api": true,
+  "health_api_details": {
+    "endpoint": "http://xwiki.contactel.es:8082/formacion/api/health/",
+    "format": "JSON",
+    "fields": [],
+    "auth": "none",
+    "interval_sec": 30
+  },
+  "metrics": [],
+  "envs": [
+    {
+      "name": "EXP",
+      "desc": "Producción",
+      "location": "xwiki.contactel.es",
+      "hosts": [
+        {
+          "type": "container",
+          "identifier": "nginx_proxy"
+        },
+        {
+          "type": "container",
+          "identifier": "django_app"
+        },
+        {
+          "type": "container",
+          "identifier": "postgres_db"
+        }
+      ]
+    }
+  ],
+  "notes": ""
+}

@@ -1,0 +1,60 @@
+# Configuraciones generadas
+output/
+test_output/
+
+# Logs
+logs/*.log
+logs/deployment.log
+
+# Archivos temporales
+*.tmp
+*.bak
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos sensibles - NUNCA subir a GitHub
+config.yml
+config.local.yml
+*.key
+*.pem
+secrets/
+*.p12
+*.pfx
+
+# Credenciales y configuración específica
+.env
+.env.local
+.env.*.local
+credentials/
+ssh_keys/
+
+# Datos específicos de empresa
+*empresa*
+*company*
+*production*
+*prod*
+
+# Backups y datos temporales
+*.backup
+*.old
+temp/
+tmp/
+
+# Carpeta observabilidad
+observabilidad/

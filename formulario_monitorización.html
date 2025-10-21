@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Formulario Completo Monitorización IT con Entornos</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 20px; padding-bottom: 100px; }
+  h2 { text-align: center; margin-bottom: 20px; }
+  form { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  fieldset { margin-bottom: 20px; padding: 15px; border-radius: 6px; }
+  legend { font-weight: bold; font-size: 16px; background: #4CAF50; color: white; padding: 4px 10px; border-radius: 4px; }
+  label { display: block; margin-top: 12px; font-size: 14px; }
+  input[type=text], input[type=email], input[type=number], textarea, select {
+    width: 100%; padding: 8px; margin-top: 6px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;
+  }
+  /* Estilos bloques */
+  #identificacion { background: #e3f2fd; }
+  #tecnologias { background: #ffe0b2; }
+  #responsables { background: #b2dfdb; }
+  #subservicios { background: #d1c4e9; }
+  #dependencias { background: #ffcdd2; }
+  #logs { background: #c5cae9; }
+  #api { background: #b2ebf2; }
+  #metricas { background: #fff9c4; }
+  #entornos { background: #e1bee7; }
+  #comentarios { background: #f5f5f5; }
+  .entry-group { margin-bottom: 10px; border: 1px dashed #aaa; padding: 10px; position: relative; border-radius: 4px; background: white; }
+  .remove-btn { position: absolute; top: 8px; right: 8px; background: #e53935; border: none; color: white; padding: 5px 10px; font-weight: bold; border-radius: 3px; cursor: pointer; }
+  .add-btn { margin-top: 10px; padding: 8px 14px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  .hosts-fieldset { margin-top: 10px; padding: 10px; border-radius: 4px; background: #f9f9f9; border: 1px solid #ddd; }
+  .hosts-fieldset legend { font-size: 14px; font-weight: bold; color: #333; background: #e8f5e8; padding: 2px 8px; border-radius: 3px; }
+  .host-entry { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .host-entry input { flex: 1; }
+  .host-entry select { width: 150px; }
+  .host-type-select { margin-right: 10px; }
+  .add-host-btn { margin-top: 8px; padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; }
+  .remove-host-btn { background: #f44336; border: none; color: white; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; min-width: 30px; }
+  button[type=submit] { width: 100%; padding: 14px; background: #43a047; color: white; border: none; border-radius: 7px; font-size: 18px; cursor: pointer; margin-top: 20px; }
+  button[type=submit]:hover { background: #388e3c; }
+  /* Estilos para errores de validación */
+  input:invalid { border-color: #e53935; }
+  input:focus:invalid { border-color: #e53935; box-shadow: 0 0 5px rgba(229, 57, 53, 0.3); }
+  .error-message { color: #e53935; font-size: 12px; margin-top: 5px; display: block; }
+</style>
+</head>
+<body>
+
+<h2>Formulario Completo de Monitorización IT con Entornos</h2>
+
+<form id="monitorForm">
+
+  <fieldset id="identificacion">
+    <legend>Identificación del Servicio</legend>
+    <label>Nombre del servicio
+      <input type="text" name="service_name" placeholder="Ej: Portal Ciudadano" required />
+    </label>
+    <label>Descripción funcional
+      <textarea name="service_desc" placeholder="Plataforma web para trámites y consultas"></textarea>
+    </label>
+    <label>Prioridad / Criticidad
+      <select name="priority" required>
+        <option value="Crítica">Crítica</option>
+        <option value="Alta">Alta</option>
+        <option value="Media">Media</option>
+        <option value="Baja">Baja</option>
+      </select>
+    </label>
+  </fieldset>
+
+  <fieldset id="tecnologias">
+    <legend>Tecnologías principales</legend>
+    <div class="entry-group">
+      <label>Tecnología
+        <input type="text" name="tech_name[]" placeholder="Ej: Django" required />
+      </label>
+      <label>Versión
+        <input type="text" name="tech_version[]" placeholder="Ej: 4.2" required />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    </div>
+    <button type="button" class="add-btn" onclick="addTech()">+ Añadir Tecnología</button>
+  </fieldset>
+
+  <fieldset id="responsables">
+    <legend>Responsables (nombre y email)</legend>
+    <div class="entry-group">
+      <label>Responsable
+        <input type="text" name="responsable_nombre[]" placeholder="Ej: Juan Pérez" required />
+      </label>
+      <label>Email
+        <input type="email" name="responsable_email[]" placeholder="juan.perez@ejemplo.com" required />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    </div>
+    <button type="button" class="add-btn" onclick="addResponsable()">+ Añadir Responsable</button>
+  </fieldset>
+
+
+  <fieldset id="dependencias">
+    <legend>Dependencias</legend>
+    <div class="entry-group">
+      <label>Nombre De Dependencia
+        <input type="text" name="dep_name[]" placeholder="Ej: SSO" required />
+      </label>
+      <label>Tipo
+        <select name="dep_type[]">
+          <option value="Base de datos">Base de datos</option>
+          <option value="API interna">API interna</option>
+          <option value="Servicio externo">Servicio externo</option>
+          <option value="Autenticación">Autenticación</option>
+          <option value="Red">Red</option>
+          <option value="Almacenamiento">Almacenamiento</option>
+          <option value="Mensajería">Mensajería</option>
+        </select>
+      </label>
+      <label>Naturaleza
+        <select name="dep_nature[]">
+          <option value="Interna">Interna</option>
+          <option value="Externa">Externa</option>
+        </select>
+      </label>
+      <label>Nivel de Impacto
+        <select name="dep_impact[]">
+          <option value="Crítico">Crítico</option>
+          <option value="Alto">Alto</option>
+          <option value="Medio">Medio</option>
+          <option value="Bajo">Bajo</option>
+        </select>
+      </label>
+      <label>Efecto del Fallo
+        <input type="text" name="dep_effect[]" placeholder="Ej: Usuarios no pueden autenticarse" />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    </div>
+    <button type="button" class="add-btn" onclick="addDependency()">+ Añadir Dependencia</button>
+  </fieldset>
+
+  <fieldset id="logs">
+    <legend>Logs y Auditoría (con método de retención)</legend>
+    <div class="entry-group">
+      <label>Nombre de Log
+        <input type="text" name="log_name[]" placeholder="Ej: formacion.log" required />
+      </label>
+      <label>Ruta o Ubicación
+        <input type="text" name="log_path[]" placeholder="/var/log/formacion.log" required />
+      </label>
+      <label>Formato
+        <select name="log_format[]">
+          <option value="Texto plano simple">Texto plano simple</option>
+          <option value="Texto plano multilínea">Texto plano multilínea</option>
+          <option value="JSON estructurado">JSON estructurado</option>
+        </select>
+      </label>
+      <label>Método de retención
+        <select name="log_retention_method[]">
+          <option value="tiempo">Tiempo (ej. 6 meses)</option>
+          <option value="tamano">Tamaño y backups (ej. 10MB,5 backups)</option>
+        </select>
+      </label>
+      <label>Valor de retención
+        <input type="text" name="log_retention_value[]" placeholder="Ej: '6 meses' o '10MB,5 backups'" />
+      </label>
+      <label>Patrones clave / Campos relevantes
+        <input type="text" name="log_patterns[]" placeholder="Ej: Login successful, Failed login attempt" />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    </div>
+    <button type="button" class="add-btn" onclick="addLog()">+ Añadir Log</button>
+    <label>¿Logs centralizados?
+      <select name="centralized_logs">
+        <option value="Sí">Sí</option>
+        <option value="No">No</option>
+      </select>
+    </label>
+  </fieldset>
+
+  <fieldset id="api">
+    <legend>API de Monitorización</legend>
+    <label>¿Expone API health/metrics?
+      <select name="health_api" id="health_api">
+        <option value="No">No</option>
+        <option value="Sí">Sí</option>
+      </select>
+    </label>
+    <div id="health_api_details" style="display:none; margin-top:10px;">
+      <label>Endpoint API
+        <input type="text" name="health_api_endpoint" placeholder="https://servicio/api/health" />
+      </label>
+      <label>Formato respuesta
+        <select name="health_api_format">
+          <option value="JSON">JSON</option>
+          <option value="XML">XML</option>
+          <option value="Texto">Texto plano</option>
+        </select>
+      </label>
+      <label>Campos a valorar (separados por coma)
+        <input type="text" name="health_api_fields" placeholder="status,latency,error_rate" />
+      </label>
+      <label>Autenticación (token, basic, none)
+        <input type="text" name="health_api_auth" placeholder="token" />
+      </label>
+      <label>Intervalo consulta (segundos)
+        <input type="number" name="health_api_interval" value="60" />
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset id="metricas">
+    <legend>Métricas y Monitorización</legend>
+    <label>Lista de métricas críticas (formato: Elemento:Métrica:Plugin:UmbralWarning:UmbralCrítico, una por línea)
+      <textarea name="metrics" placeholder="Ej: CPU:Uso %:check_nrpe:80:95"></textarea>
+    </label>
+  </fieldset>
+
+  <fieldset id="entornos">
+    <legend>Definición de Entornos</legend>
+    <div class="entry-group">
+      <label>Nombre entorno
+        <input type="text" name="env_name[]" placeholder="Ej: EXP" required />
+      </label>
+      <label>Descripción
+        <input type="text" name="env_desc[]" placeholder="Producción" />
+      </label>
+      <label>Ubicación física
+        <input type="text" name="env_location[]" placeholder="Datacenter XYZ" />
+      </label>
+
+      <!-- Hosts asociados section -->
+      <fieldset class="hosts-fieldset">
+        <legend>Hosts/Contenedores asociados</legend>
+        <div class="host-entry">
+          <label>Tipo
+            <select name="env_host_type[]" class="host-type-select">
+              <option value="host_ip">Host/IP</option>
+              <option value="container">Contenedor</option>
+              <option value="service">Nombre de Servicio</option>
+              <option value="domain">Dominio</option>
+            </select>
+          </label>
+          <label>Identificador
+            <input type="text" name="env_hosts[]" placeholder="192.168.10.1 o nombre-contenedor" required />
+          </label>
+          <button type="button" class="remove-host-btn" onclick="removeHostEntry(this)">×</button>
+        </div>
+        <button type="button" class="add-host-btn" onclick="addHostEntry(this)">+ Añadir Host/Contenedor</button>
+      </fieldset>
+
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    </div>
+    <button type="button" class="add-btn" onclick="addEnv()">+ Añadir Entorno</button>
+  </fieldset>
+
+  <fieldset id="comentarios">
+    <legend>Comentarios y observaciones</legend>
+    <textarea name="notes" placeholder="Notas adicionales"></textarea>
+  </fieldset>
+
+  <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+    <button type="submit" style="flex: 1;" onclick="document.getElementById('monitorForm').dispatchEvent(new Event('submit'))">Generar JSON</button>
+    <div style="display: flex; align-items: center; gap: 5px;">
+      <input type="file" id="importFile" accept=".json" style="font-size: 14px;" />
+      <button type="button" onclick="importJSON()">Importar JSON</button>
+    </div>
+  </div>
+</form>
+
+<h3>Salida JSON</h3>
+<pre id="output"></pre>
+
+<script>
+  function removeEntry(btn) {
+    btn.parentElement.remove();
+  }
+
+  function addTech() {
+    const container = document.getElementById('tecnologias');
+    const newEntry = document.createElement('div');
+    newEntry.className = 'entry-group';
+    newEntry.innerHTML = `
+      <label>Tecnología
+        <input type="text" name="tech_name[]" placeholder="Ej: Django" required />
+      </label>
+      <label>Versión
+        <input type="text" name="tech_version[]" placeholder="Ej: 4.2" required />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    `;
+    container.insertBefore(newEntry, container.querySelector('.add-btn'));
+  }
+
+  function addResponsable() {
+    const container = document.getElementById('responsables');
+    const newEntry = document.createElement('div');
+    newEntry.className = 'entry-group';
+    newEntry.innerHTML = `
+      <label>Responsable
+        <input type="text" name="responsable_nombre[]" placeholder="Ej: Juan Pérez" required />
+      </label>
+      <label>Email
+        <input type="email" name="responsable_email[]" placeholder="juan.perez@ejemplo.com" required />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    `;
+    container.insertBefore(newEntry, container.querySelector('.add-btn'));
+  }
+
+
+  function addDependency() {
+    const container = document.getElementById('dependencias');
+    const newEntry = document.createElement('div');
+    newEntry.className = 'entry-group';
+    newEntry.innerHTML = `
+      <label>Nombre De Dependencia
+        <input type="text" name="dep_name[]" placeholder="Ej: SSO" required />
+      </label>
+      <label>Tipo
+        <select name="dep_type[]">
+          <option value="Base de datos">Base de datos</option>
+          <option value="API interna">API interna</option>
+          <option value="Servicio externo">Servicio externo</option>
+          <option value="Autenticación">Autenticación</option>
+          <option value="Red">Red</option>
+          <option value="Almacenamiento">Almacenamiento</option>
+          <option value="Mensajería">Mensajería</option>
+        </select>
+      </label>
+      <label>Naturaleza
+        <select name="dep_nature[]">
+          <option value="Interna">Interna</option>
+          <option value="Externa">Externa</option>
+        </select>
+      </label>
+      <label>Nivel de Impacto
+        <select name="dep_impact[]">
+          <option value="Crítico">Crítico</option>
+          <option value="Alto">Alto</option>
+          <option value="Medio">Medio</option>
+          <option value="Bajo">Bajo</option>
+        </select>
+      </label>
+      <label>Efecto del Fallo
+        <input type="text" name="dep_effect[]" placeholder="Ej: Usuarios no pueden autenticarse" />
+      </label>
+      <label>Servicios/Componentes Afectados (coma separados)
+        <input type="text" name="dep_affected_services[]" placeholder="Ej: PortalCiudadano, API_Tramites" />
+      </label>
+      <label>Puerto
+        <input type="text" name="dep_port[]" placeholder="Ej: 8080, 443" />
+      </label>
+      <label>Protocolo de Chequeo
+        <select name="dep_check_protocol[]">
+          <option value="http">HTTP/HTTPS</option>
+          <option value="tcp">TCP</option>
+          <option value="icmp">Ping</option>
+          <option value="dns">DNS</option>
+          <option value="ldap">LDAP</option>
+          <option value="smtp">SMTP</option>
+          <option value="sql">SQL</option>
+        </select>
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    `;
+    container.insertBefore(newEntry, container.querySelector('.add-btn'));
+  }
+
+  function addLog() {
+    const container = document.getElementById('logs');
+    const newEntry = document.createElement('div');
+    newEntry.className = 'entry-group';
+    newEntry.innerHTML = `
+      <label>Nombre de Log
+        <input type="text" name="log_name[]" placeholder="Ej: formacion.log" required />
+      </label>
+      <label>Ruta o Ubicación
+        <input type="text" name="log_path[]" placeholder="/var/log/formacion.log" required />
+      </label>
+      <label>Formato
+        <select name="log_format[]">
+          <option value="Texto plano simple">Texto plano simple</option>
+          <option value="Texto plano multilínea">Texto plano multilínea</option>
+          <option value="JSON estructurado">JSON estructurado</option>
+        </select>
+      </label>
+      <label>Método de retención
+        <select name="log_retention_method[]">
+          <option value="tiempo">Tiempo (ej. 6 meses)</option>
+          <option value="tamano">Tamaño y backups (ej. 10MB,5 backups)</option>
+        </select>
+      </label>
+      <label>Valor de retención
+        <input type="text" name="log_retention_value[]" placeholder="Ej: '6 meses' o '10MB,5 backups'" />
+      </label>
+      <label>Patrones clave / Campos relevantes
+        <input type="text" name="log_patterns[]" placeholder="Ej: Login successful, Failed login attempt" />
+      </label>
+      <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+    `;
+    container.insertBefore(newEntry, container.querySelector('.add-btn'));
+  }
+
+  function addEnv() {
+     const container = document.getElementById('entornos');
+     if (!container) {
+       console.error('No se encontró el contenedor de entornos');
+       return;
+     }
+     const newEntry = document.createElement('div');
+     newEntry.className = 'entry-group';
+     newEntry.innerHTML = `
+       <label>Nombre entorno
+         <input type="text" name="env_name[]" placeholder="Ej: EXP" required />
+       </label>
+       <label>Descripción
+         <input type="text" name="env_desc[]" placeholder="Producción" />
+       </label>
+       <label>Ubicación física
+         <input type="text" name="env_location[]" placeholder="Datacenter XYZ" />
+       </label>
+
+       <!-- Hosts asociados section -->
+       <fieldset class="hosts-fieldset">
+         <legend>Hosts/Contenedores asociados</legend>
+         <div class="host-entry">
+           <label>Tipo
+             <select name="env_host_type[]" class="host-type-select">
+               <option value="host_ip">Host/IP</option>
+               <option value="container">Contenedor</option>
+               <option value="service">Nombre de Servicio</option>
+               <option value="domain">Dominio</option>
+             </select>
+           </label>
+           <label>Identificador
+             <input type="text" name="env_hosts[]" placeholder="192.168.10.1 o nombre-contenedor" required />
+           </label>
+           <button type="button" class="remove-host-btn" onclick="removeHostEntry(this)">×</button>
+         </div>
+         <button type="button" class="add-host-btn" onclick="addHostEntry(this)">+ Añadir Host/Contenedor</button>
+       </fieldset>
+
+       <button type="button" class="remove-btn" onclick="removeEntry(this)">×</button>
+     `;
+     container.insertBefore(newEntry, container.querySelector('.add-btn'));
+   }
+
+   function addHostEntry(button) {
+     const hostsFieldset = button.parentElement;
+     const newHostEntry = document.createElement('div');
+     newHostEntry.className = 'host-entry';
+     newHostEntry.innerHTML = `
+       <label>Tipo
+         <select name="env_host_type[]" class="host-type-select">
+           <option value="host_ip">Host/IP</option>
+           <option value="container">Contenedor</option>
+           <option value="service">Nombre de Servicio</option>
+           <option value="domain">Dominio</option>
+         </select>
+       </label>
+       <label>Identificador
+         <input type="text" name="env_hosts[]" placeholder="192.168.10.1 o nombre-contenedor" required />
+       </label>
+       <button type="button" class="remove-host-btn" onclick="removeHostEntry(this)">×</button>
+     `;
+     hostsFieldset.insertBefore(newHostEntry, button);
+   }
+
+   function removeHostEntry(button) {
+     const hostEntry = button.parentElement;
+     const hostsFieldset = hostEntry.parentElement;
+     const hostEntries = hostsFieldset.querySelectorAll('.host-entry');
+
+     // Ensure at least one host entry remains
+     if (hostEntries.length > 1) {
+       hostEntry.remove();
+     } else {
+       alert('Debe mantener al menos un host asociado.');
+     }
+   }
+
+  document.getElementById('health_api').addEventListener('change', function() {
+    const details = document.getElementById('health_api_details');
+    details.style.display = this.value === 'Sí' ? 'block' : 'none';
+  });
+
+  document.getElementById('monitorForm').onsubmit = function(e) {
+    e.preventDefault();
+
+    // Función para limpiar errores de validación
+    function clearValidationError() {
+      this.style.border = '';
+    }
+
+    // Validación básica de campos requeridos
+    const requiredFields = e.target.querySelectorAll('[required]');
+    let isValid = true;
+
+    for (let field of requiredFields) {
+      if (!field.value || field.value.trim() === '') {
+        field.style.border = '2px solid red';
+        field.addEventListener('input', clearValidationError);
+        isValid = false;
+      } else {
+        field.style.border = '';
+        field.removeEventListener('input', clearValidationError);
+      }
+    }
+
+    if (!isValid) {
+      alert('Por favor, complete todos los campos requeridos marcados en rojo.');
+      return;
+    }
+
+    const fd = new FormData(e.target);
+
+    function getAllValues(name) {
+      return fd.getAll(name).filter(v => v && v.trim() !== '');
+    }
+    function getMultiSelect(name) {
+      const select = e.target.querySelector(`[name="${name}"]`);
+      return [...select.options].filter(o => o.selected).map(o => o.value);
+    }
+
+    const json = {
+      identification: {
+        service_name: fd.get('service_name'),
+        service_desc: fd.get('service_desc'),
+        priority: fd.get('priority'),
+      },
+      tech_stack: getAllValues('tech_name[]').map((name, i) => ({
+        technology: name,
+        version: getAllValues('tech_version[]')[i] || ""
+      })),
+      responsables: getAllValues('responsable_nombre[]').map((name, i) => ({
+        nombre: name,
+        email: getAllValues('responsable_email[]')[i] || ""
+      })),
+      dependencies: getAllValues('dep_name[]').map((name, i) => ({
+        name,
+        type: getAllValues('dep_type[]')[i] || "",
+        nature: getAllValues('dep_nature[]')[i] || "",
+        impact: getAllValues('dep_impact[]')[i] || "",
+        port: getAllValues('dep_port[]')[i] || "",
+        check_protocol: getAllValues('dep_check_protocol[]')[i] || "",
+        effect: getAllValues('dep_effect[]')[i] || "",
+        affected_services: (getAllValues('dep_affected_services[]')[i] || "").split(',').map(s => s.trim()).filter(Boolean)
+      })),
+      logs: getAllValues('log_name[]').map((name, i) => ({
+        name,
+        path: getAllValues('log_path[]')[i] || "",
+        format: getAllValues('log_format[]')[i] || "",
+        retention_method: getAllValues('log_retention_method[]')[i] || "",
+        retention_value: getAllValues('log_retention_value[]')[i] || "",
+        patterns: (getAllValues('log_patterns[]')[i] || "").split(',').map(p => p.trim()).filter(Boolean)
+      })),
+      centralized_logs: fd.get('centralized_logs'),
+      health_api: fd.get('health_api') === 'Sí',
+      health_api_details: fd.get('health_api') === 'Sí' ? {
+        endpoint: fd.get('health_api_endpoint'),
+        format: fd.get('health_api_format'),
+        fields: fd.get('health_api_fields').split(',').map(f=>f.trim()).filter(Boolean),
+        auth: fd.get('health_api_auth'),
+        interval_sec: Number(fd.get('health_api_interval'))
+      } : null,
+      metrics: (fd.get('metrics') || "").split('\\n').map(l => l.trim()).filter(Boolean),
+      envs: getAllValues('env_name[]').map((name, i) => {
+        const envIndex = i;
+        const hostsForThisEnv = [];
+
+        // Get hosts for current environment from DOM
+        const currentEnvEntry = document.querySelectorAll('#entornos .entry-group')[envIndex];
+        if (currentEnvEntry) {
+          const hostEntries = currentEnvEntry.querySelectorAll('.host-entry');
+          hostEntries.forEach(hostEntry => {
+            const hostTypeSelect = hostEntry.querySelector('select[name="env_host_type[]"]');
+            const hostInput = hostEntry.querySelector('input[name="env_hosts[]"]');
+
+            if (hostInput && hostInput.value && hostInput.value.trim() !== '') {
+              hostsForThisEnv.push({
+                type: hostTypeSelect ? hostTypeSelect.value : 'host_ip',
+                identifier: hostInput.value.trim()
+              });
+            }
+          });
+        }
+
+        return {
+          name,
+          desc: getAllValues('env_desc[]')[i] || "",
+          location: getAllValues('env_location[]')[i] || "",
+          hosts: hostsForThisEnv
+        };
+      }),
+      notes: fd.get('notes')
+    };
+
+    document.getElementById('output').textContent = JSON.stringify(json, null, 2);
+  };
+
+  // Import JSON functionality
+  function importJSON() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert('Por favor, selecciona un archivo JSON primero.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const jsonData = JSON.parse(e.target.result);
+        populateFormFromJSON(jsonData);
+        alert('Datos importados correctamente.');
+      } catch (error) {
+        alert('Error al leer el archivo JSON: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function populateFormFromJSON(data) {
+    // Helper function to safely set values
+    function setValue(selector, value) {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.value = value || '';
+      }
+    }
+
+    function setValueByName(name, value) {
+      const element = document.querySelector(`[name="${name}"]`);
+      if (element) {
+        element.value = value || '';
+      }
+    }
+
+    // Clear existing dynamic entries first
+    clearDynamicEntries();
+
+    // Populate identification section
+    if (data.identification) {
+      setValueByName('service_name', data.identification.service_name);
+      setValueByName('service_desc', data.identification.service_desc);
+      setValueByName('priority', data.identification.priority);
+    }
+
+    // Populate tech stack
+    if (data.tech_stack && data.tech_stack.length > 0) {
+      const techContainer = document.getElementById('tecnologias');
+      if (techContainer) {
+        data.tech_stack.forEach((tech, index) => {
+          if (index === 0) {
+            // Update the first existing entry
+            const firstEntry = techContainer.querySelector('.entry-group');
+            if (firstEntry) {
+              setValueByName('tech_name[]', tech.technology);
+              setValueByName('tech_version[]', tech.version);
+            }
+          } else {
+            // Add new entries
+            addTech();
+            setTimeout(() => {
+              const entries = techContainer.querySelectorAll('.entry-group');
+              if (entries.length > index) {
+                const newEntry = entries[index];
+                if (newEntry) {
+                  const techInput = newEntry.querySelector('[name="tech_name[]"]');
+                  const versionInput = newEntry.querySelector('[name="tech_version[]"]');
+                  if (techInput) techInput.value = tech.technology || '';
+                  if (versionInput) versionInput.value = tech.version || '';
+                }
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+
+    // Populate responsables
+    if (data.responsables && data.responsables.length > 0) {
+      const respContainer = document.getElementById('responsables');
+      if (respContainer) {
+        data.responsables.forEach((resp, index) => {
+          if (index === 0) {
+            const firstEntry = respContainer.querySelector('.entry-group');
+            if (firstEntry) {
+              setValueByName('responsable_nombre[]', resp.nombre);
+              setValueByName('responsable_email[]', resp.email);
+            }
+          } else {
+            addResponsable();
+            setTimeout(() => {
+              const entries = respContainer.querySelectorAll('.entry-group');
+              if (entries.length > index) {
+                const newEntry = entries[index];
+                if (newEntry) {
+                  const nombreInput = newEntry.querySelector('[name="responsable_nombre[]"]');
+                  const emailInput = newEntry.querySelector('[name="responsable_email[]"]');
+                  if (nombreInput) nombreInput.value = resp.nombre || '';
+                  if (emailInput) emailInput.value = resp.email || '';
+                }
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+
+    // Populate dependencies
+    if (data.dependencies && data.dependencies.length > 0) {
+      const depContainer = document.getElementById('dependencias');
+      if (depContainer) {
+        data.dependencies.forEach((dep, index) => {
+          if (index === 0) {
+            const firstEntry = depContainer.querySelector('.entry-group');
+            if (firstEntry) {
+              setValueByName('dep_name[]', dep.name);
+              setValueByName('dep_type[]', dep.type);
+              setValueByName('dep_nature[]', dep.nature);
+              setValueByName('dep_impact[]', dep.impact);
+              setValueByName('dep_effect[]', dep.effect);
+              setValueByName('dep_affected_services[]', dep.affected_services ? dep.affected_services.join(', ') : '');
+              setValueByName('dep_port[]', dep.port);
+              setValueByName('dep_check_protocol[]', dep.check_protocol);
+            }
+          } else {
+            addDependency();
+            setTimeout(() => {
+              const entries = depContainer.querySelectorAll('.entry-group');
+              if (entries.length > index) {
+                const newEntry = entries[index];
+                if (newEntry) {
+                  const nameInput = newEntry.querySelector('[name="dep_name[]"]');
+                  const typeInput = newEntry.querySelector('[name="dep_type[]"]');
+                  const natureInput = newEntry.querySelector('[name="dep_nature[]"]');
+                  const impactInput = newEntry.querySelector('[name="dep_impact[]"]');
+                  const effectInput = newEntry.querySelector('[name="dep_effect[]"]');
+                  const affectedInput = newEntry.querySelector('[name="dep_affected_services[]"]');
+                  const portInput = newEntry.querySelector('[name="dep_port[]"]');
+                  const protocolInput = newEntry.querySelector('[name="dep_check_protocol[]"]');
+
+                  if (nameInput) nameInput.value = dep.name || '';
+                  if (typeInput) typeInput.value = dep.type || '';
+                  if (natureInput) natureInput.value = dep.nature || '';
+                  if (impactInput) impactInput.value = dep.impact || '';
+                  if (effectInput) effectInput.value = dep.effect || '';
+                  if (affectedInput) affectedInput.value = dep.affected_services ? dep.affected_services.join(', ') : '';
+                  if (portInput) portInput.value = dep.port || '';
+                  if (protocolInput) protocolInput.value = dep.check_protocol || '';
+                }
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+
+    // Populate logs
+    if (data.logs && data.logs.length > 0) {
+      const logsContainer = document.getElementById('logs');
+      if (logsContainer) {
+        data.logs.forEach((log, index) => {
+          if (index === 0) {
+            const firstEntry = logsContainer.querySelector('.entry-group');
+            if (firstEntry) {
+              setValueByName('log_name[]', log.name);
+              setValueByName('log_path[]', log.path);
+              setValueByName('log_format[]', log.format);
+              setValueByName('log_retention_method[]', log.retention_method);
+              setValueByName('log_retention_value[]', log.retention_value);
+              setValueByName('log_patterns[]', log.patterns ? log.patterns.join(', ') : '');
+            }
+          } else {
+            addLog();
+            setTimeout(() => {
+              const entries = logsContainer.querySelectorAll('.entry-group');
+              if (entries.length > index) {
+                const newEntry = entries[index];
+                if (newEntry) {
+                  const nameInput = newEntry.querySelector('[name="log_name[]"]');
+                  const pathInput = newEntry.querySelector('[name="log_path[]"]');
+                  const formatInput = newEntry.querySelector('[name="log_format[]"]');
+                  const methodInput = newEntry.querySelector('[name="log_retention_method[]"]');
+                  const valueInput = newEntry.querySelector('[name="log_retention_value[]"]');
+                  const patternsInput = newEntry.querySelector('[name="log_patterns[]"]');
+
+                  if (nameInput) nameInput.value = log.name || '';
+                  if (pathInput) pathInput.value = log.path || '';
+                  if (formatInput) formatInput.value = log.format || '';
+                  if (methodInput) methodInput.value = log.retention_method || '';
+                  if (valueInput) valueInput.value = log.retention_value || '';
+                  if (patternsInput) patternsInput.value = log.patterns ? log.patterns.join(', ') : '';
+                }
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+
+    // Populate centralized logs
+    if (data.centralized_logs) {
+      setValueByName('centralized_logs', data.centralized_logs);
+    }
+
+    // Populate health API
+    if (data.health_api !== undefined) {
+      setValueByName('health_api', data.health_api ? 'Sí' : 'No');
+
+      // Show/hide API details
+      const details = document.getElementById('health_api_details');
+      if (details) {
+        details.style.display = data.health_api ? 'block' : 'none';
+      }
+
+      if (data.health_api && data.health_api_details) {
+        setValueByName('health_api_endpoint', data.health_api_details.endpoint);
+        setValueByName('health_api_format', data.health_api_details.format);
+        setValueByName('health_api_fields', data.health_api_details.fields ? data.health_api_details.fields.join(', ') : '');
+        setValueByName('health_api_auth', data.health_api_details.auth);
+        setValueByName('health_api_interval', data.health_api_details.interval_sec);
+      }
+    }
+
+    // Populate metrics
+    if (data.metrics && data.metrics.length > 0) {
+      setValueByName('metrics', data.metrics.join('\n'));
+    }
+
+    // Populate environments
+    if (data.envs && data.envs.length > 0) {
+      const envsContainer = document.getElementById('entornos');
+      if (envsContainer) {
+        data.envs.forEach((env, index) => {
+          if (index === 0) {
+            const firstEntry = envsContainer.querySelector('.entry-group');
+            if (firstEntry) {
+              setValueByName('env_name[]', env.name);
+              setValueByName('env_desc[]', env.desc);
+              setValueByName('env_location[]', env.location);
+
+              // Populate hosts for this environment
+              if (env.hosts && env.hosts.length > 0) {
+                const hostsFieldset = firstEntry.querySelector('.hosts-fieldset');
+                if (hostsFieldset) {
+                  env.hosts.forEach((host, hostIndex) => {
+                    if (hostIndex === 0) {
+                      const firstHostEntry = hostsFieldset.querySelector('.host-entry');
+                      if (firstHostEntry) {
+                        const typeInput = firstHostEntry.querySelector('[name="env_host_type[]"]');
+                        const identifierInput = firstHostEntry.querySelector('[name="env_hosts[]"]');
+                        if (typeInput) typeInput.value = host.type || 'host_ip';
+                        if (identifierInput) identifierInput.value = host.identifier || '';
+                      }
+                    } else {
+                      const addButton = hostsFieldset.querySelector('.add-host-btn');
+                      if (addButton) {
+                        addHostEntry(addButton);
+                        setTimeout(() => {
+                          const hostEntries = hostsFieldset.querySelectorAll('.host-entry');
+                          if (hostEntries.length > hostIndex) {
+                            const newHostEntry = hostEntries[hostIndex];
+                            if (newHostEntry) {
+                              const typeInput = newHostEntry.querySelector('[name="env_host_type[]"]');
+                              const identifierInput = newHostEntry.querySelector('[name="env_hosts[]"]');
+                              if (typeInput) typeInput.value = host.type || 'host_ip';
+                              if (identifierInput) identifierInput.value = host.identifier || '';
+                            }
+                          }
+                        }, 100);
+                      }
+                    }
+                  });
+                }
+              }
+            }
+          } else {
+            addEnv();
+            setTimeout(() => {
+              const entries = envsContainer.querySelectorAll('.entry-group');
+              if (entries.length > index) {
+                const newEntry = entries[index];
+                if (newEntry) {
+                  const nameInput = newEntry.querySelector('[name="env_name[]"]');
+                  const descInput = newEntry.querySelector('[name="env_desc[]"]');
+                  const locationInput = newEntry.querySelector('[name="env_location[]"]');
+
+                  if (nameInput) nameInput.value = env.name || '';
+                  if (descInput) descInput.value = env.desc || '';
+                  if (locationInput) locationInput.value = env.location || '';
+
+                  // Populate hosts for this environment
+                  if (env.hosts && env.hosts.length > 0) {
+                    const hostsFieldset = newEntry.querySelector('.hosts-fieldset');
+                    if (hostsFieldset) {
+                      env.hosts.forEach((host, hostIndex) => {
+                        if (hostIndex === 0) {
+                          const firstHostEntry = hostsFieldset.querySelector('.host-entry');
+                          if (firstHostEntry) {
+                            const typeInput = firstHostEntry.querySelector('[name="env_host_type[]"]');
+                            const identifierInput = firstHostEntry.querySelector('[name="env_hosts[]"]');
+                            if (typeInput) typeInput.value = host.type || 'host_ip';
+                            if (identifierInput) identifierInput.value = host.identifier || '';
+                          }
+                        } else {
+                          const addButton = hostsFieldset.querySelector('.add-host-btn');
+                          if (addButton) {
+                            addHostEntry(addButton);
+                            setTimeout(() => {
+                              const hostEntries = hostsFieldset.querySelectorAll('.host-entry');
+                              if (hostEntries.length > hostIndex) {
+                                const newHostEntry = hostEntries[hostIndex];
+                                if (newHostEntry) {
+                                  const typeInput = newHostEntry.querySelector('[name="env_host_type[]"]');
+                                  const identifierInput = newHostEntry.querySelector('[name="env_hosts[]"]');
+                                  if (typeInput) typeInput.value = host.type || 'host_ip';
+                                  if (identifierInput) identifierInput.value = host.identifier || '';
+                                }
+                              }
+                            }, 100);
+                          }
+                        }
+                      });
+                    }
+                  }
+                }
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+
+    // Populate notes
+    if (data.notes) {
+      setValueByName('notes', data.notes);
+    }
+  }
+
+  function clearDynamicEntries() {
+    // Remove all dynamic entries except the first one in each section
+    const sections = ['tecnologias', 'responsables', 'dependencias', 'logs', 'entornos'];
+
+    sections.forEach(sectionId => {
+      const container = document.getElementById(sectionId);
+      if (container) {
+        const entries = container.querySelectorAll('.entry-group');
+        // Keep only the first entry, remove the rest
+        for (let i = entries.length - 1; i > 0; i--) {
+          entries[i].remove();
+        }
+
+        // Clear the first entry
+        if (entries.length > 0) {
+          const firstEntry = entries[0];
+          const inputs = firstEntry.querySelectorAll('input, select, textarea');
+          inputs.forEach(input => {
+            if (input.type !== 'button') {
+              input.value = '';
+            }
+          });
+        }
+      }
+    });
+  }
+
+ </script>
+
+</body>
+</html>
