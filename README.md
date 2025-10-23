@@ -2,15 +2,19 @@
 
 🚀 **Sistema completo para automatizar la configuración y despliegue de Nagios y Elastic Stack basado en formularios JSON**
 
-## 🆕 Novedades v1.1 - Despliegue Automático
+## 🆕 Novedades v1.2 - Mejoras en Automatización
 
-- ✅ **Despliegue automático** de configuraciones a servidores
-- ✅ **Archivo de configuración separado** (`config.yml`) para infraestructura
-- ✅ **Soporte multi-entorno** (production, staging, development)
-- ✅ **Backup automático** antes de despliegues
-- ✅ **Validación post-despliegue** de servicios
-- ✅ **Notificaciones** por email/Slack
-- ✅ **Modo dry-run** para pruebas seguras
+- ✅ **Descubrimiento automático mejorado** con análisis de respuestas HTTP para inferir tipos de servicio
+- ✅ **Plugins dinámicos** para checks personalizados sin modificar código
+- ✅ **Integración automática de health checks** detectados en endpoints
+- ✅ **Parámetros avanzados** para configuraciones precisas de checks
+- ✅ **Despliegue automático** de configuraciones a servidores (v1.1)
+- ✅ **Archivo de configuración separado** (`config.yml`) para infraestructura (v1.1)
+- ✅ **Soporte multi-entorno** (production, staging, development) (v1.1)
+- ✅ **Backup automático** antes de despliegues (v1.1)
+- ✅ **Validación post-despliegue** de servicios (v1.1)
+- ✅ **Notificaciones** por email/Slack (v1.1)
+- ✅ **Modo dry-run** para pruebas seguras (v1.1)
 
 ## 📋 Descripción General
 
@@ -155,6 +159,75 @@ python deployment.py output/execution_20241201_143000/ --env staging
 ## 📁 Estructura del JSON de Entrada
 
 El formulario genera un JSON con la siguiente estructura:
+
+### Parámetros Avanzados para Checks
+
+Para una configuración más precisa, puedes incluir parámetros avanzados en `check_params` para cada dependencia. El sistema detecta automáticamente muchos de estos, pero puedes especificarlos manualmente:
+
+#### Ejemplo de Dependencia HTTP con Parámetros Avanzados
+
+```json
+{
+  "name": "API Principal",
+  "type": "API",
+  "nature": "Externa",
+  "impact": "Crítico",
+  "port": "443",
+  "check_protocol": "http",
+  "effect": "API no responde",
+  "check_params": {
+    "url": "/api/v1/health",
+    "expected_status": 200,
+    "timeout": 30,
+    "ssl": true,
+    "auth_user": "user",
+    "auth_pass": "pass"
+  }
+}
+```
+
+#### Parámetros Disponibles por Protocolo
+
+- **HTTP/HTTPS:**
+  - `url`: Ruta específica (ej. "/health")
+  - `expected_status`: Código de respuesta esperado (por defecto 200)
+  - `timeout`: Timeout en segundos (por defecto 30)
+  - `ssl`: Usar SSL (true/false)
+  - `auth_user` / `auth_pass`: Credenciales básicas
+
+- **TCP:**
+  - `timeout`: Timeout en segundos
+  - `send`: String a enviar
+  - `expect`: Respuesta esperada
+  - `ssl`: Usar SSL
+
+- **Docker/Kubernetes:**
+  - `container_name`: Nombre del contenedor
+  - `check_type`: Tipo de check (running, status)
+  - `resource_type`: Tipo de recurso (service, pod)
+
+#### Descubrimiento Automático Mejorado
+
+El sistema ahora analiza respuestas HTTP para inferir tipos de servicio y detectar endpoints de health automáticamente. Por ejemplo:
+- Detecta si es un servidor web (Nginx, Apache) basado en headers y contenido
+- Identifica APIs JSON y ajusta `expected_status`
+- Encuentra endpoints de health como `/health`, `/status` y los incluye en `check_params`
+
+#### Plugins Dinámicos
+
+Puedes agregar nuevos tipos de checks creando archivos `.py` en `plugins/checks/`. El sistema los carga automáticamente si la clase hereda de `BaseCheck`. Ejemplo de plugin personalizado:
+
+```python
+from plugins.checks.base import BaseCheck
+
+class MQTTCheck(BaseCheck):
+    def get_required_params(self) -> list:
+        return ['port', 'topic']
+
+    def get_nagios_command(self, dependency_config: Dict[str, Any]) -> str:
+        # Implementar comando personalizado
+        return f"check_mqtt -H {dependency_config['host_address']} -p {dependency_config['port']}"
+```
 
 ```json
 {
@@ -398,6 +471,9 @@ python monitoring_automator.py service_example.json
 
 ## 📈 Mejoras Futuras
 
+- [x] **Mejorado:** Descubrimiento automático de servicios con análisis de respuestas HTTP
+- [x] **Mejorado:** Soporte para plugins dinámicos de checks
+- [x] **Mejorado:** Integración automática de endpoints de health
 - [ ] Soporte para Zabbix como alternativa a Nagios
 - [ ] Generación automática de dashboards avanzados en Kibana
 - [ ] Integración con Ansible para despliegue automatizado
@@ -430,5 +506,5 @@ Para soporte técnico o consultas:
 ---
 
 **Desarrollado por:** Equipo de Monitorización y Observabilidad
-**Versión:** 1.1.0
+**Versión:** 1.2.0
 **Última actualización:** Octubre 2025

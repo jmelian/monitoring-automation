@@ -8,6 +8,7 @@ import json
 import os
 from datetime import datetime
 from jinja2 import Template
+from plugins.check_manager import check_manager
 
 
 class NagiosConfigGenerator:
@@ -29,16 +30,8 @@ class NagiosConfigGenerator:
             "Baja": {"interval": 1800, "retry": 10, "max_attempts": 10}
         }
 
-        # Mapear protocolos a comandos de Nagios
-        self.protocol_commands = {
-            "http": "check_http",
-            "tcp": "check_tcp",
-            "icmp": "check_ping",
-            "dns": "check_dns",
-            "ldap": "check_ldap",
-            "smtp": "check_smtp",
-            "sql": "check_mysql"
-        }
+        # Usar check_manager para protocolos extensibles
+        self.check_manager = check_manager
 
     def _get_priority_config(self, priority):
         """Obtiene configuración de check basada en prioridad"""
@@ -63,14 +56,14 @@ class NagiosConfigGenerator:
 
             for host in env.get("hosts", []):
                 host_id = self._generate_host_id(env_name, host.get("type", "host"), host.get("identifier", ""))
-                host_address = host.get("identifier", "")
+                host_address = host.get("address", host.get("identifier", ""))
 
                 # Determinar dirección basada en tipo de host
                 if host.get("type") == "container":
                     # Para contenedores, usar nombre del contenedor como alias
                     host_alias = f"{env_name} - {host.get('identifier', '')}"
                 elif host.get("type") == "domain":
-                    host_address = host.get("identifier", "")
+                    host_address = host.get("address", host.get("identifier", ""))
                     host_alias = f"{env_name} - {host_address}"
                 else:
                     host_alias = f"{env_name} - {host_address}"
@@ -244,15 +237,9 @@ define service {
 
                     service_id = self._generate_service_id(service_name, dep_name, env_name)
 
-                    # Determinar comando de check basado en protocolo
-                    if dep_protocol == "http":
-                        check_command = f"check_http -H {host.get('identifier', '')} -p {dep_port}"
-                    elif dep_protocol == "tcp":
-                        check_command = f"check_tcp -H {host.get('identifier', '')} -p {dep_port}"
-                    elif dep_protocol == "icmp":
-                        check_command = f"check_ping -H {host.get('identifier', '')}"
-                    else:
-                        check_command = f"check_tcp -H {host.get('identifier', '')} -p {dep_port}"
+                    # Usar check_manager para generar comando
+                    host_address = host.get("address", host.get("identifier", ""))
+                    check_command = self.check_manager.get_nagios_command(dep, host_address)
 
                     service_config = {
                         "service_id": service_id,
@@ -391,7 +378,7 @@ cfg_file=/etc/nagios/objects/commands.cfg
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
-            print(f"✓ Archivo generado: {filepath}")
+            print(f"OK Archivo generado: {filepath}")
 
         return saved_files, {
             "hosts": hosts_data,
@@ -409,11 +396,11 @@ def generate_nagios_from_json(json_file, output_dir="output/nagios"):
         generator = NagiosConfigGenerator(data, output_dir)
         files, metadata = generator.generate_all_configs()
 
-        print(f"\n✓ Configuración de Nagios generada exitosamente!")
-        print(f"✓ Archivos generados: {len(files)}")
-        print(f"✓ Hosts configurados: {len(metadata['hosts'])}")
-        print(f"✓ Servicios configurados: {len(metadata['services'])}")
-        print(f"✓ Contactos configurados: {len(metadata['contacts'])}")
+        print(f"\nOK Configuracion de Nagios generada exitosamente!")
+        print(f"OK Archivos generados: {len(files)}")
+        print(f"OK Hosts configurados: {len(metadata['hosts'])}")
+        print(f"OK Servicios configurados: {len(metadata['services'])}")
+        print(f"OK Contactos configurados: {len(metadata['contacts'])}")
 
         return files, metadata
 

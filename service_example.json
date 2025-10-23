@@ -43,9 +43,15 @@
       "type": "API interna",
       "nature": "Interna",
       "impact": "Crítico",
-      "port": "",
+      "port": "8000",
       "check_protocol": "http",
       "effect": "No se puede verificar el estado del servicio",
+      "check_params": {
+        "url": "/api/health/",
+        "expected_status": 200,
+        "timeout": 30,
+        "ssl": false
+      },
       "affected_services": [
         "Monitoring"
       ]
@@ -90,11 +96,13 @@
       "hosts": [
         {
           "type": "container",
-          "identifier": "web-app-prod"
+          "identifier": "web-app-prod",
+          "address": "web-app-prod"
         },
         {
           "type": "container",
-          "identifier": "db-prod"
+          "identifier": "db-prod",
+          "address": "db-prod"
         }
       ]
     },
@@ -105,11 +113,13 @@
       "hosts": [
         {
           "type": "container",
-          "identifier": "web-app-staging"
+          "identifier": "web-app-staging",
+          "address": "web-app-staging"
         },
         {
           "type": "container",
-          "identifier": "db-staging"
+          "identifier": "db-staging",
+          "address": "db-staging"
         }
       ]
     }

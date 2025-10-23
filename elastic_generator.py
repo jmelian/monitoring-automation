@@ -118,6 +118,19 @@ class ElasticConfigGenerator:
                 "environment": "default"
             }
 
+            # Agregar información de hosts si está disponible
+            hosts_info = []
+            for env in self.data.get("envs", []):
+                for host in env.get("hosts", []):
+                    host_info = {
+                        "type": host.get("type", "host"),
+                        "identifier": host.get("identifier", ""),
+                        "address": host.get("address", host.get("identifier", ""))
+                    }
+                    hosts_info.append(host_info)
+            if hosts_info:
+                fields["hosts"] = hosts_info
+
             input_config = {
                 "type": "log",
                 "paths": [log_path],
@@ -445,7 +458,7 @@ class ElasticConfigGenerator:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
-            print(f"✓ Archivo generado: {filepath}")
+            print(f"OK Archivo generado: {filepath}")
 
         return saved_files, {
             "filebeat": filebeat_cfg,
@@ -466,10 +479,10 @@ def generate_elastic_from_json(json_file, output_dir="output/elastic"):
         generator = ElasticConfigGenerator(data, output_dir)
         files, metadata = generator.generate_all_configs()
 
-        print(f"\n✓ Configuración de Elastic Stack generada exitosamente!")
-        print(f"✓ Archivos generados: {len(files)}")
-        print(f"✓ Logs configurados: {len(data.get('logs', []))}")
-        print(f"✓ Alertas configuradas: {len(metadata['alerts'])}")
+        print(f"\nOK Configuracion de Elastic Stack generada exitosamente!")
+        print(f"OK Archivos generados: {len(files)}")
+        print(f"OK Logs configurados: {len(data.get('logs', []))}")
+        print(f"OK Alertas configuradas: {len(metadata['alerts'])}")
 
         return files, metadata
 

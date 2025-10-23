@@ -15,6 +15,7 @@ from pathlib import Path
 # Importar módulos generadores
 from nagios_generator import generate_nagios_from_json
 from elastic_generator import generate_elastic_from_json
+from plugins.service_discovery import discover_services
 
 
 class MonitoringAutomator:
@@ -37,33 +38,33 @@ class MonitoringAutomator:
             required_sections = ['identification', 'logs']
             for section in required_sections:
                 if section not in data:
-                    print(f"⚠️  Advertencia: Sección '{section}' no encontrada en JSON")
+                    print(f"AVISO: Seccion '{section}' no encontrada en JSON")
                 else:
-                    print(f"✓ Sección '{section}' encontrada")
+                    print(f"OK Seccion '{section}' encontrada")
 
             # Validar identificación
             if 'identification' in data:
                 service_name = data['identification'].get('service_name', 'No especificado')
-                print(f"✓ Servicio identificado: {service_name}")
+                print(f"OK Servicio identificado: {service_name}")
 
             # Validar logs
             if 'logs' in data:
                 logs_count = len(data['logs'])
-                print(f"✓ Logs configurados: {logs_count}")
+                print(f"OK Logs configurados: {logs_count}")
 
                 for log in data['logs']:
                     if 'name' not in log or 'path' not in log:
-                        print(f"⚠️  Advertencia: Log incompleto: {log}")
+                        print(f"AVISO: Log incompleto: {log}")
 
             # Validar dependencias
             if 'dependencies' in data:
                 deps_count = len(data['dependencies'])
-                print(f"✓ Dependencias configuradas: {deps_count}")
+                print(f"OK Dependencias configuradas: {deps_count}")
 
             # Validar entornos
             if 'envs' in data:
                 envs_count = len(data['envs'])
-                print(f"✓ Entornos configurados: {envs_count}")
+                print(f"OK Entornos configurados: {envs_count}")
 
             return True, data
 
@@ -77,35 +78,40 @@ class MonitoringAutomator:
     def generate_monitoring_configs(self, json_file, nagios_only=False, elastic_only=False):
         """Genera todas las configuraciones de monitorización"""
         print("=" * 60)
-        print("🚀 SISTEMA DE AUTOMATIZACIÓN DE MONITORIZACIÓN")
+        print("SISTEMA DE AUTOMATIZACION DE MONITORIZACION")
         print("=" * 60)
 
         # Validar JSON
-        print(f"\n📋 Validando archivo JSON: {json_file}")
+        print(f"\nValidando archivo JSON: {json_file}")
         is_valid, data = self.validate_json(json_file)
 
         if not is_valid:
             return False
 
+        # Auto-detección de servicios
+        print("Ejecutando auto-deteccion de servicios...")
+        data = discover_services(data)
+        print("Auto-deteccion completada")
+
         # Crear directorio de ejecución específico
         execution_dir = self.output_base_dir / f"execution_{self.timestamp}"
         execution_dir.mkdir(exist_ok=True)
 
-        print(f"\n📁 Directorio de salida: {execution_dir}")
+        print(f"\nDirectorio de salida: {execution_dir}")
 
         # Generar configuraciones
         all_files = []
         metadata = {}
 
         if not elastic_only:
-            print("\n🔧 Generando configuración de Nagios...")
+            print("\nGenerando configuracion de Nagios...")
             nagios_dir = execution_dir / "nagios"
             nagios_files, nagios_meta = generate_nagios_from_json(json_file, str(nagios_dir))
             all_files.extend(nagios_files)
             metadata['nagios'] = nagios_meta
 
         if not nagios_only:
-            print("\n🔧 Generando configuración de Elastic Stack...")
+            print("\nGenerando configuracion de Elastic Stack...")
             elastic_dir = execution_dir / "elastic"
             elastic_files, elastic_meta = generate_elastic_from_json(json_file, str(elastic_dir))
             all_files.extend(elastic_files)
@@ -234,29 +240,29 @@ class MonitoringAutomator:
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(report_content)
 
-        print(f"✓ Reporte generado: {report_file}")
+        print(f"OK Reporte generado: {report_file}")
 
     def show_final_summary(self, files, metadata):
         """Muestra resumen final de la generación"""
         print("\n" + "=" * 60)
-        print("✅ GENERACIÓN COMPLETADA")
+        print("GENERACION COMPLETADA")
         print("=" * 60)
-        print(f"📊 Archivos totales generados: {len(files)}")
+        print(f"Archivos totales generados: {len(files)}")
 
         if 'nagios' in metadata:
             nagios = metadata['nagios']
-            print("🔧 Nagios:")
+            print("Nagios:")
             print(f"   • Hosts: {len(nagios.get('hosts', []))}")
             print(f"   • Servicios: {len(nagios.get('services', []))}")
             print(f"   • Contactos: {len(nagios.get('contacts', []))}")
 
         if 'elastic' in metadata:
             elastic = metadata['elastic']
-            print("🔍 Elastic Stack:")
+            print("Elastic Stack:")
             print(f"   • Configuraciones: {len([f for f in files if 'elastic' in f])}")
             print(f"   • Alertas: {len(elastic.get('alerts', []))}")
 
-        print("\n📋 Revisa el archivo README.md generado para instrucciones detalladas")
+        print("\nRevisa el archivo README.md generado para instrucciones detalladas")
         print("=" * 60)
 
 
@@ -320,7 +326,7 @@ Ejemplos de uso:
 
     # Validar argumentos mutuamente excluyentes
     if args.nagios_only and args.elastic_only:
-        print("❌ Error: No se pueden especificar --nagios-only y --elastic-only simultáneamente")
+        print("ERROR: No se pueden especificar --nagios-only y --elastic-only simultaneamente")
         sys.exit(1)
 
     # Crear automatizador y generar configuraciones
@@ -334,11 +340,11 @@ Ejemplos de uso:
         )
 
         if success:
-            print("\n🎉 ¡Generación de configuraciones completada exitosamente!")
+            print("\nEXITO: Generacion de configuraciones completada exitosamente!")
 
             # Despliegue automático si se solicita
             if args.deploy:
-                print(f"\n🚀 Iniciando despliegue automático en entorno '{args.deploy_env}'...")
+                print(f"\nIniciando despliegue automatico en entorno '{args.deploy_env}'...")
 
                 # Encontrar directorio de ejecución más reciente
                 import glob
@@ -358,24 +364,24 @@ Ejemplos de uso:
                     )
 
                     if deploy_success:
-                        print("\n🎉 ¡Despliegue completado exitosamente!")
+                        print("\nEXITO: Despliegue completado exitosamente!")
                     else:
-                        print("\n❌ Error durante el despliegue automático")
+                        print("\nERROR: Error durante el despliegue automatico")
                         sys.exit(1)
                 else:
-                    print("\n❌ No se encontró directorio de ejecución para desplegar")
+                    print("\nERROR: No se encontro directorio de ejecucion para desplegar")
                     sys.exit(1)
 
             sys.exit(0)
         else:
-            print("\n❌ Error durante la generación de configuraciones")
+            print("\nERROR: Error durante la generacion de configuraciones")
             sys.exit(1)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Proceso interrumpido por el usuario")
+        print("\n\nAVISO: Proceso interrumpido por el usuario")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error inesperado: {e}")
+        print(f"\nERROR: Error inesperado: {e}")
         sys.exit(1)
 
 
