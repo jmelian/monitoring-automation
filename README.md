@@ -125,6 +125,75 @@ python monitoring_automator.py servicio.json -o /ruta/personalizada
 python deployment.py output/execution_20241201_143000/ --env staging
 ```
 
+## ⚙️ Configuración Detallada (config.yml)
+
+El archivo `config.yml` define la configuración de infraestructura para el despliegue automático de monitorización. Copia `config.yml.example` a `config.yml` y personalízalo con tus datos reales. A continuación, se explica cada bloque principal:
+
+### 1. **nagios** (Configuración de Nagios)
+   - **Propósito**: Define cómo conectar y configurar el servidor de Nagios para desplegar checks y hosts generados.
+   - **Subsecciones**:
+     - `server`: Detalles del servidor Nagios (host, puerto SSH, usuario, clave SSH, directorios de config y backups). Se usa para conexiones SSH y copiar archivos.
+     - `check_commands`: Parámetros globales para comandos de chequeo (timeout, retries, interval). Afecta cómo se generan y ejecutan los checks en Nagios.
+   - **Uso**: Esencial para el despliegue automático de configuraciones Nagios generadas por `nagios_generator.py`.
+
+### 2. **elastic** (Configuración de Elastic Stack)
+   - **Propósito**: Configura los componentes de Elasticsearch, Kibana, Logstash y Filebeat para procesar logs y métricas.
+   - **Subsecciones**:
+     - `elasticsearch`: Hosts, autenticación (con env vars como `${ELASTIC_PASSWORD}`), SSL y timeouts. Se usa para crear pipelines de ingest.
+     - `kibana`: Host, puerto y auth para dashboards.
+     - `logstash`: Host, puerto y directorio de configs para pipelines de procesamiento.
+     - `filebeat`: Targets (servidores remotos) y configs globales para recolectar logs.
+   - **Uso**: Permite el despliegue automático de configs Elastic generadas por `elastic_generator.py`, incluyendo pipelines, dashboards y recolectores de logs.
+
+### 3. **general** (Configuración General del Sistema)
+   - **Propósito**: Opciones globales que controlan el comportamiento del despliegue.
+   - **Campos**:
+     - `backup_before_deploy`: Si hacer backup antes de cambios.
+     - `validate_after_deploy`: Si validar configs post-despliegue.
+     - `dry_run`: Modo simulación (no cambios reales).
+     - `log_level`: Nivel de logging (INFO, DEBUG, etc.).
+     - `notification_email`: Email para notificaciones.
+     - `temp_dir`: Directorio temporal para archivos.
+   - **Uso**: Estos flags se chequean para decidir si hacer backups, validar, o ejecutar en dry-run.
+
+### 4. **environments** (Configuración por Entorno)
+   - **Propósito**: Define configuraciones específicas para entornos como production, staging, development (e.g., contactos Nagios, prefijos de índices Elastic, severidad de alertas).
+   - **Subsecciones**: Cada entorno (production, staging, development) tiene campos como `nagios_contact_group`, `elastic_index_prefix`, `alert_severity`, etc.
+   - **Uso**: Se selecciona vía argumento `--env` en `deployment.py`. Permite adaptar el despliegue por entorno sin cambiar el código.
+
+### 5. **security** (Configuración de Seguridad)
+   - **Propósito**: Maneja aspectos de seguridad como claves SSH, sudo, y backends de secretos.
+   - **Campos**:
+     - `ssh_key_passphrase`: Passphrase para claves SSH (si aplica).
+     - `sudo_password`: Password para sudo (si no se usa clave).
+     - `vault_enabled`: Integración con HashiCorp Vault (no implementada en el código actual).
+     - `secrets_backend`: Backend para secretos (env, vault, etc.).
+   - **Uso**: Se usa en conexiones SSH para autenticación segura. Actualmente, se basa en env vars para secretos.
+
+### 6. **notifications** (Configuración de Notificaciones)
+   - **Propósito**: Define cómo enviar alertas post-despliegue (email, Slack).
+   - **Subsecciones**:
+     - `email`: SMTP server, puerto, TLS, etc.
+     - `slack`: Webhook URL (con `${SLACK_WEBHOOK_URL}`) y canal.
+   - **Uso**: Al final del despliegue, envía notificaciones de éxito/fallo.
+
+### 7. **logging** (Configuración de Logging del Sistema de Despliegue)
+   - **Propósito**: Controla cómo el script `deployment.py` registra logs (nivel, archivo, formato).
+   - **Campos**:
+     - `level`: Nivel de log (INFO, etc.).
+     - `file`: Ruta al archivo de log (e.g., `logs/deployment.log`).
+     - `max_size`, `backups`: Rotación de logs.
+     - `format`: Formato de los mensajes.
+   - **Uso**: Se configura para logging a archivo y consola.
+
+### Notas Generales sobre Configuración:
+- **Variables de Entorno**: Campos como `${ELASTIC_PASSWORD}` se resuelven desde variables de entorno del sistema (e.g., `export ELASTIC_PASSWORD=tu_password`) para evitar hardcodear secretos.
+- **Personalización**: Edita `config.yml` con tus valores reales. El código asume que existe este archivo para el despliegue.
+- **Integración**: Este config se usa solo en `deployment.py` para el despliegue; `monitoring_automator.py` lo invoca si usas `--deploy`.
+- **Seguridad**: Nunca subas `config.yml` a GitHub, ya que contiene credenciales. Usa `config.yml.example` como plantilla.
+
+Para más detalles técnicos, revisa el código en `deployment.py` (funciones como `_resolve_env_vars` y `_connect_ssh`).
+
 ## 📊 Características del Sistema
 
 ### Funcionalidades de Nagios
