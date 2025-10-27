@@ -15,6 +15,11 @@ from pathlib import Path
 from datetime import datetime
 import logging
 from typing import Dict, List, Optional, Tuple
+# Importar módulos generadores
+from nagios_generator import generate_nagios_from_json
+from elastic_generator import generate_elastic_from_json
+from plugins.service_discovery import discover_services
+from nagiosql_adapter import create_nagiosql_adapter
 
 
 class DeploymentManager:
@@ -94,6 +99,71 @@ class DeploymentManager:
         """Despliega configuraciones de Nagios"""
         self.logger.info("Iniciando despliegue de Nagios...")
 
+        # Verificar si usar NagiosQL
+        nagiosql_config = self.config.get('nagiosql', {})
+        use_nagiosql = nagiosql_config.get('integration_method') != 'none'
+
+        if use_nagiosql:
+            return self._deploy_nagios_via_nagiosql(config_dir, environment)
+        else:
+            return self._deploy_nagios_direct(config_dir, environment)
+
+    def _deploy_nagios_via_nagiosql(self, config_dir: Path, environment: str = "production") -> bool:
+        """Despliega configuraciones de Nagios vía NagiosQL"""
+        self.logger.info("Desplegando Nagios vía NagiosQL...")
+
+        try:
+            # Crear adaptador NagiosQL
+            nagiosql_config = self.config['nagiosql']
+            adapter = create_nagiosql_adapter(nagiosql_config)
+
+            # Leer archivos de configuración generados
+            nagios_dir = config_dir / "nagios"
+            if not nagios_dir.exists():
+                self.logger.error("Directorio de configuraciones Nagios no encontrado")
+                return False
+
+            config_files = {}
+            for cfg_file in ["hosts.cfg", "services.cfg", "commands.cfg", "contacts.cfg"]:
+                cfg_path = nagios_dir / cfg_file
+                if cfg_path.exists():
+                    with open(cfg_path, 'r', encoding='utf-8') as f:
+                        config_files[cfg_file] = f.read()
+                else:
+                    self.logger.warning(f"Archivo de configuración no encontrado: {cfg_file}")
+
+            if not config_files:
+                self.logger.error("No se encontraron archivos de configuración de Nagios")
+                return False
+
+            # Importar configuraciones a NagiosQL
+            if not adapter.import_configurations(config_files):
+                self.logger.error("Error importando configuraciones a NagiosQL")
+                return False
+
+            # Validar importación
+            if nagiosql_config.get('behavior', {}).get('validate_after_import', True):
+                if not adapter.validate_import():
+                    self.logger.error("Validación de importación a NagiosQL fallida")
+                    return False
+
+            # Exportar a Nagios automáticamente
+            if nagiosql_config.get('behavior', {}).get('auto_export_to_nagios', True):
+                if not adapter.export_to_nagios():
+                    self.logger.error("Error exportando configuraciones de NagiosQL a Nagios")
+                    return False
+
+            self.logger.info("Despliegue de Nagios vía NagiosQL completado exitosamente")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error en despliegue vía NagiosQL: {e}")
+            return False
+
+    def _deploy_nagios_direct(self, config_dir: Path, environment: str = "production") -> bool:
+        """Despliega configuraciones de Nagios directamente (método original)"""
+        self.logger.info("Desplegando Nagios directamente...")
+
         nagios_config = self.config['nagios']
         env_config = self.config['environments'].get(environment, {})
 
@@ -133,7 +203,7 @@ class DeploymentManager:
                     self.logger.error("Verificación post-despliegue de Nagios fallida")
                     return False
 
-            self.logger.info("Despliegue de Nagios completado exitosamente")
+            self.logger.info("Despliegue directo de Nagios completado exitosamente")
             return True
 
         finally:
@@ -610,6 +680,18 @@ def main():
     )
 
     parser.add_argument(
+        '--use-nagiosql',
+        action='store_true',
+        help='Forzar despliegue de Nagios vía NagiosQL (ignora configuración)'
+    )
+
+    parser.add_argument(
+        '--skip-nagiosql',
+        action='store_true',
+        help='Forzar despliegue directo de Nagios (ignora configuración NagiosQL)'
+    )
+
+    parser.add_argument(
         '--dry-run',
         action='store_true',
         help='Ejecutar en modo simulación (no realizar cambios reales)'
@@ -622,6 +704,10 @@ def main():
         print("❌ Error: No se pueden especificar --nagios-only y --elastic-only simultáneamente")
         sys.exit(1)
 
+    if args.use_nagiosql and args.skip_nagiosql:
+        print("❌ Error: No se pueden especificar --use-nagiosql y --skip-nagiosql simultáneamente")
+        sys.exit(1)
+
     # Crear gestor de despliegue
     try:
         deployer = DeploymentManager(args.config)
@@ -629,6 +715,16 @@ def main():
         # Override dry-run si se especifica
         if args.dry_run:
             deployer.config['general']['dry_run'] = True
+
+        # Override método de despliegue Nagios si se especifica
+        if args.use_nagiosql:
+            if 'nagiosql' not in deployer.config:
+                deployer.config['nagiosql'] = {}
+            deployer.config['nagiosql']['integration_method'] = 'api'
+        elif args.skip_nagiosql:
+            if 'nagiosql' not in deployer.config:
+                deployer.config['nagiosql'] = {}
+            deployer.config['nagiosql']['integration_method'] = 'none'
 
         # Ejecutar despliegue
         success = deployer.deploy_all(

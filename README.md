@@ -2,7 +2,7 @@
 
 🚀 **Sistema completo para automatizar la configuración y despliegue de Nagios y Elastic Stack basado en formularios JSON**
 
-## 🆕 Novedades v1.3 - Sistema de Logging Completo
+## 🆕 Novedades v1.4 - Integración Completa con NagiosQL
 
 - ✅ **Sistema de logging completo** con niveles DEBUG/INFO/WARNING/ERROR
 - ✅ **Archivo de log automático** (`monitoring_automator.log`) con rotación
@@ -19,6 +19,11 @@
 - ✅ **Validación post-despliegue** de servicios (v1.1)
 - ✅ **Notificaciones** por email/Slack (v1.1)
 - ✅ **Modo dry-run** para pruebas seguras (v1.1)
+- ✅ **Integración completa con NagiosQL** (v1.4)
+- ✅ **Múltiples métodos de integración**: API REST, BD directa, archivos temporales (v1.4)
+- ✅ **Idempotencia mediante checksums** para evitar duplicados (v1.4)
+- ✅ **Validación automática** de importaciones a NagiosQL (v1.4)
+- ✅ **Exportación automática** desde NagiosQL a Nagios (v1.4)
 
 ## 📋 Descripción General
 
@@ -46,6 +51,14 @@ Todo basado en un formulario web que genera un JSON estructurado con la informac
 - Ping (para conectividad básica)
 - DNS, LDAP, SMTP, SQL (para servicios específicos)
 
+✅ **Integración con NagiosQL:**
+- Importación automática vía API REST
+- Inserción directa en base de datos MySQL
+- Archivos temporales para importación manual
+- Idempotencia mediante checksums MD5
+- Validación automática post-importación
+- Exportación automática a Nagios
+
 ### Funcionalidades de Elastic Stack
 
 ✅ **Configuración automática de:**
@@ -64,14 +77,16 @@ Todo basado en un formulario web que genera un JSON estructurado con la informac
 ## 🏗️ Arquitectura del Sistema
 
 ```
-Sistema de Automatización v1.3
-├── 📄 formulario_monitorización.html    # Formulario web para capturar datos
+Sistema de Automatización v1.4
+├── 📄 formulario_monitorizacion.html    # Formulario web para capturar datos
 ├── 📄 monitoring_automator.py           # Script principal (generación + despliegue opcional)
 ├── 📄 nagios_generator.py              # Generador de configs Nagios
 ├── 📄 elastic_generator.py             # Generador de configs Elastic
 ├── 📄 validate_configs.py              # Validador de configuraciones
 ├── 📄 deployment.py                    # 🚀 NUEVO: Despliegue automático
+├── 📄 nagiosql_adapter.py              # 🔗 NUEVO: Adaptador NagiosQL
 ├── 📄 config.yml                       # ⚙️ NUEVO: Configuración de infraestructura
+├── 📄 config.yml.example               # 📋 NUEVO: Ejemplo de configuración
 ├── 📄 monitoring_automator.log         # 📋 NUEVO: Archivo de log automático
 ├──  output/                          # Configuraciones generadas
 ├── 📁 logs/                           # Logs del sistema
@@ -87,16 +102,23 @@ flowchart TD
     C --> D[monitoring_automator.py]
     D --> E[nagios_generator.py]
     D --> F[elastic_generator.py]
-    E --> G[Configuraciones Nagios]
+    E --> G[Configuraciones Nagios .cfg]
     F --> H[Configuraciones Elastic]
     G --> I[output/]
     H --> I
     I --> J{¿Desplegar?}
     J -->|Sí| K[deployment.py]
-    K --> L[Servidores]
-    J -->|No| M[Fin]
-    L --> N[Validación]
-    N --> O[Fin]
+    K --> L{¿Usar NagiosQL?}
+    L -->|Sí| M[nagiosql_adapter.py]
+    M --> N[Importar a NagiosQL]
+    N --> O[Validar Importación]
+    O --> P[Exportar a Nagios]
+    L -->|No| Q[Despliegue Directo SSH]
+    Q --> R[Servidores Nagios]
+    P --> R
+    R --> S[Validación]
+    S --> T[Fin]
+    J -->|No| T
 ```
 
 
@@ -112,7 +134,11 @@ source monitoring_env/bin/activate  # Linux/Mac
 monitoring_env\Scripts\activate     # Windows
 
 # Instalar dependencias
-pip install jinja2 pyyaml paramiko requests
+pip install jinja2 pyyaml paramiko requests mysql-connector-python
+
+# Crear archivo de configuración desde el ejemplo
+cp config.yml.example config.yml
+# Editar config.yml con tus datos reales de NagiosQL
 ```
 
 ### 2. Configurar infraestructura
@@ -123,11 +149,15 @@ cp config.yml.example config.yml
 
 # Editar config.yml con tus datos reales (servidores, credenciales, etc.)
 nano config.yml  # o tu editor favorito
+
+# Configurar variables de entorno para credenciales
+export NAGIOSQL_PASSWORD="tu_password_nagiosql"
+export NAGIOSQL_API_KEY="tu_api_key_opcional"
 ```
 
 ### 3. Usar el formulario web
 
-1. Abrir `formulario_monitorización.html` en un navegador web
+1. Abrir `formulario_monitorizacion.html` en un navegador web
 2. Completar todos los campos requeridos:
    - **Identificación del servicio** (nombre, descripción, prioridad)
    - **Tecnologías** utilizadas (Django, Nginx, PostgreSQL, etc.)
@@ -160,11 +190,92 @@ python monitoring_automator.py servicio.json -o /ruta/personalizada
 
 # Desplegar configuraciones existentes
 python deployment.py output/execution_20241201_143000/ --env staging
+
+# Desplegar Nagios vía NagiosQL (si está configurado)
+python deployment.py output/execution_20241201_143000/ --use-nagiosql
+
+# Forzar despliegue directo de Nagios (ignorar NagiosQL)
+python deployment.py output/execution_20241201_143000/ --skip-nagiosql
+
+# Ver estado de configuraciones generadas
+ls -la output/execution_*/nagios/
 ```
 
 ## ⚙️ Configuración Detallada (config.yml)
 
 El archivo `config.yml` define la configuración de infraestructura para el despliegue automático de monitorización. Copia `config.yml.example` a `config.yml` y personalízalo con tus datos reales. A continuación, se explica cada bloque principal:
+
+### 1. **nagios** (Configuración de Nagios)
+   - **Propósito**: Define cómo conectar y configurar el servidor de Nagios para desplegar checks y hosts generados.
+   - **Subsecciones**:
+     - `server`: Detalles del servidor Nagios (host, puerto SSH, usuario, clave SSH, directorios de config y backups). Se usa para conexiones SSH y copiar archivos.
+     - `check_commands`: Parámetros globales para comandos de chequeo (timeout, retries, interval). Afecta cómo se generan y ejecutan los checks en Nagios.
+   - **Uso**: Esencial para el despliegue automático de configuraciones Nagios generadas por `nagios_generator.py`.
+
+### 2. **nagiosql** (Configuración de NagiosQL - NUEVO)
+   - **Propósito**: Configura la integración con NagiosQL para gestión centralizada de configuraciones.
+   - **Subsecciones**:
+     - `integration_method`: Método de integración ('api', 'database', 'file', 'none')
+     - `api`: Configuración para API REST (URL, credenciales, timeouts)
+     - `database`: Configuración para acceso directo a BD MySQL de NagiosQL
+     - `behavior`: Configuración de comportamiento (checksums, backups, validación)
+   - **Uso**: Permite importar configuraciones Nagios generadas directamente a NagiosQL, evitando gestión manual de archivos .cfg.
+
+### 3. **elastic** (Configuración de Elastic Stack)
+   - **Propósito**: Configura los componentes de Elasticsearch, Kibana, Logstash y Filebeat para procesar logs y métricas.
+   - **Subsecciones**:
+     - `elasticsearch`: Hosts, autenticación (con env vars como `${ELASTIC_PASSWORD}`), SSL y timeouts. Se usa para crear pipelines de ingest.
+     - `kibana`: Host, puerto y auth para dashboards.
+     - `logstash`: Host, puerto y directorio de configs para pipelines de procesamiento.
+     - `filebeat`: Targets (servidores remotos) y configs globales para recolectar logs.
+   - **Uso**: Permite el despliegue automático de configs Elastic generadas por `elastic_generator.py`, incluyendo pipelines, dashboards y recolectores de logs.
+
+### 4. **general** (Configuración General del Sistema)
+   - **Propósito**: Opciones globales que controlan el comportamiento del despliegue.
+   - **Campos**:
+     - `backup_before_deploy`: Si hacer backup antes de cambios.
+     - `validate_after_deploy`: Si validar configs post-despliegue.
+     - `dry_run`: Modo simulación (no cambios reales).
+     - `log_level`: Nivel de logging (INFO, DEBUG, etc.).
+     - `notification_email`: Email para notificaciones.
+     - `temp_dir`: Directorio temporal para archivos.
+   - **Uso**: Estos flags se chequean para decidir si hacer backups, validar, o ejecutar en dry-run.
+
+### 5. **environments** (Configuración por Entorno)
+   - **Propósito**: Define configuraciones específicas para entornos como production, staging, development (e.g., contactos Nagios, prefijos de índices Elastic, severidad de alertas).
+   - **Subsecciones**: Cada entorno (production, staging, development) tiene campos como `nagios_contact_group`, `elastic_index_prefix`, `alert_severity`, etc.
+   - **Uso**: Se selecciona vía argumento `--env` en `deployment.py`. Permite adaptar el despliegue por entorno sin cambiar el código.
+
+### 6. **security** (Configuración de Seguridad)
+   - **Propósito**: Maneja aspectos de seguridad como claves SSH, sudo, y backends de secretos.
+   - **Campos**:
+     - `ssh_key_passphrase`: Passphrase para claves SSH (si aplica).
+     - `sudo_password`: Password para sudo (si no se usa clave).
+     - `vault_enabled`: Integración con HashiCorp Vault (no implementada en el código actual).
+     - `secrets_backend`: Backend para secretos (env, vault, etc.).
+   - **Uso**: Se usa en conexiones SSH para autenticación segura. Actualmente, se basa en env vars para secretos.
+
+### 7. **notifications** (Configuración de Notificaciones)
+   - **Propósito**: Define cómo enviar alertas post-despliegue (email, Slack).
+   - **Subsecciones**:
+     - `email`: SMTP server, puerto, TLS, etc.
+     - `slack`: Webhook URL (con `${SLACK_WEBHOOK_URL}`) y canal.
+   - **Uso**: Al final del despliegue, envía notificaciones de éxito/fallo.
+
+### 8. **logging** (Configuración de Logging del Sistema de Despliegue)
+   - **Propósito**: Controla cómo el script `deployment.py` registra logs (nivel, archivo, formato).
+   - **Campos**:
+     - `level`: Nivel de log (INFO, etc.).
+     - `file`: Ruta al archivo de log (e.g., `logs/deployment.log`).
+     - `max_size`, `backups`: Rotación de logs.
+     - `format`: Formato de los mensajes.
+   - **Uso**: Se configura para logging a archivo y consola.
+
+### Notas Generales sobre Configuración:
+- **Variables de Entorno**: Campos como `${ELASTIC_PASSWORD}` se resuelven desde variables de entorno del sistema (e.g., `export ELASTIC_PASSWORD=tu_password`) para evitar hardcodear secretos.
+- **Personalización**: Edita `config.yml` con tus valores reales. El código asume que existe este archivo para el despliegue.
+- **Integración**: Este config se usa solo en `deployment.py` para el despliegue; `monitoring_automator.py` lo invoca si usas `--deploy`.
+- **Seguridad**: Nunca subas `config.yml` a GitHub, ya que contiene credenciales. Usa `config.yml.example` como plantilla.
 
 ### 1. **nagios** (Configuración de Nagios)
    - **Propósito**: Define cómo conectar y configurar el servidor de Nagios para desplegar checks y hosts generados.
@@ -441,6 +552,88 @@ curl -X PUT "localhost:9200/_ingest/pipeline/PIPELINE_NAME" \
 ```
 
 ## 🛠️ Personalización Avanzada
+### Integración con NagiosQL
+
+#### Métodos de Integración Disponibles
+
+El sistema soporta múltiples métodos para integrar con NagiosQL:
+
+1. **API REST** (Recomendado):
+   ```yaml
+   nagiosql:
+     integration_method: "api"
+     api:
+       url: "http://nagiosql.example.com"
+       username: "api_user"
+       password: "${NAGIOSQL_PASSWORD}"
+       verify_ssl: true
+   ```
+
+2. **Base de Datos Directa**:
+   ```yaml
+   nagiosql:
+     integration_method: "database"
+     database:
+       host: "localhost"
+       user: "nagiosql_user"
+       password: "${NAGIOSQL_DB_PASSWORD}"
+       database: "nagiosql"
+   ```
+
+3. **Archivos Temporales**:
+   ```yaml
+   nagiosql:
+     integration_method: "file"
+   ```
+
+#### Configuración de Comportamiento
+
+```yaml
+nagiosql:
+  behavior:
+    use_checksums: true          # Idempotencia mediante checksums
+    update_existing: true        # Actualizar objetos existentes
+    create_backups: true         # Backup antes de cambios
+    validate_after_import: true  # Validar importación
+    auto_export_to_nagios: true  # Exportar automáticamente a Nagios
+```
+
+#### Uso del Adaptador NagiosQL
+
+```python
+from nagiosql_adapter import create_nagiosql_adapter
+
+# Configurar adaptador
+config = {
+    'api_url': 'http://nagiosql.example.com',
+    'username': 'admin',
+    'password': 'password',
+    'integration_method': 'api',
+    'use_checksums': True
+}
+
+adapter = create_nagiosql_adapter(config)
+
+# Importar configuraciones
+config_files = {
+    'hosts.cfg': contenido_hosts,
+    'services.cfg': contenido_services,
+    'contacts.cfg': contenido_contacts
+}
+
+success = adapter.import_configurations(config_files)
+if success:
+    adapter.validate_import()
+    adapter.export_to_nagios()
+```
+
+#### Solución de Problemas con NagiosQL
+
+- **Error de conexión**: Verificar URL, credenciales y conectividad de red
+- **Permisos insuficientes**: El usuario API debe tener permisos para crear/editar objetos
+- **Versiones incompatibles**: Verificar compatibilidad con la versión de NagiosQL
+- **Duplicados**: El sistema usa checksums para evitar duplicados, pero verifica configuración
+
 
 ### Modificar Patrones de Logs
 
@@ -613,5 +806,5 @@ Este proyecto está bajo la licencia MIT. Ver archivo `LICENSE` para más detall
 ---
 
 **Desarrollado por:** Equipo de Monitorización y Observabilidad
-**Versión:** 1.3.0
+**Versión:** 1.4.0
 **Última actualización:** Octubre 2025

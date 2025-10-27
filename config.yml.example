@@ -4,6 +4,7 @@
 
 # Configuración de Nagios
 nagios:
+  # Configuración para despliegue directo a archivos Nagios
   server:
     host: "nagios.example.com"
     port: 22
@@ -18,6 +19,36 @@ nagios:
     timeout: 30
     retries: 3
     interval: 300
+
+# Configuración de NagiosQL (para integración con NagiosQL)
+nagiosql:
+  # Método de integración preferido: 'api', 'database', 'file'
+  integration_method: "api"
+
+  # Configuración de API REST
+  api:
+    url: "http://nagiosql.example.com"
+    username: "api_user"
+    password: "${NAGIOSQL_PASSWORD}"
+    api_key: "${NAGIOSQL_API_KEY}"  # Opcional, si usa API key
+    verify_ssl: true
+    timeout: 30
+
+  # Configuración de base de datos (para inserción directa)
+  database:
+    host: "localhost"
+    port: 3306
+    user: "nagiosql_user"
+    password: "${NAGIOSQL_DB_PASSWORD}"
+    database: "nagiosql"
+
+  # Configuración de comportamiento
+  behavior:
+    use_checksums: true          # Usar checksums para idempotencia
+    update_existing: true        # Actualizar objetos existentes
+    create_backups: true         # Crear backups antes de cambios
+    validate_after_import: true  # Validar importación
+    auto_export_to_nagios: true  # Exportar automáticamente a Nagios después de importar
 
 # Configuración de Elastic Stack
 elastic:
