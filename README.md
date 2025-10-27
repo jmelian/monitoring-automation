@@ -29,6 +29,38 @@ Este sistema permite generar automáticamente configuraciones completas de monit
 
 Todo basado en un formulario web que genera un JSON estructurado con la información del servicio.
 
+## 📊 Características del Sistema
+
+### Funcionalidades de Nagios
+
+✅ **Configuración automática de:**
+- Definición de hosts basada en entornos
+- Servicios de monitorización por puerto/protocolo
+- Grupos de contactos por responsable
+- Comandos de chequeo estándar
+- Configuración basada en prioridades e impacto
+
+✅ **Tipos de chequeo soportados:**
+- HTTP/HTTPS (para APIs y sitios web)
+- TCP (para puertos específicos)
+- Ping (para conectividad básica)
+- DNS, LDAP, SMTP, SQL (para servicios específicos)
+
+### Funcionalidades de Elastic Stack
+
+✅ **Configuración automática de:**
+- **Filebeat**: Inputs para diferentes tipos de logs
+- **Logstash**: Pipelines de procesamiento con filtros Grok/JSON
+- **Elasticsearch**: Templates de índice y pipelines de ingest
+- **Kibana**: Dashboards básicos y configuración de alertas
+
+✅ **Procesamiento de logs:**
+- **Texto plano simple**: Parsing con patrones Grok
+- **Texto multilínea**: Manejo de stacks traces y logs multilínea
+- **JSON estructurado**: Procesamiento directo de JSON
+- **Campos personalizados**: Metadata de servicio y entorno
+
+
 ## 🏗️ Arquitectura del Sistema
 
 ```
@@ -108,7 +140,7 @@ nano config.yml  # o tu editor favorito
 
 **Nota:** También puedes usar el archivo `service_example.json` incluido como ejemplo para pruebas.
 
-### 3. Generar configuraciones
+### 4. Generar configuraciones
 
 ```bash
 # Generar configuración completa (Nagios + Elastic)
@@ -199,36 +231,6 @@ El archivo `config.yml` define la configuración de infraestructura para el desp
 
 Para más detalles técnicos, revisa el código en `deployment.py` (funciones como `_resolve_env_vars` y `_connect_ssh`).
 
-## 📊 Características del Sistema
-
-### Funcionalidades de Nagios
-
-✅ **Configuración automática de:**
-- Definición de hosts basada en entornos
-- Servicios de monitorización por puerto/protocolo
-- Grupos de contactos por responsable
-- Comandos de chequeo estándar
-- Configuración basada en prioridades e impacto
-
-✅ **Tipos de chequeo soportados:**
-- HTTP/HTTPS (para APIs y sitios web)
-- TCP (para puertos específicos)
-- Ping (para conectividad básica)
-- DNS, LDAP, SMTP, SQL (para servicios específicos)
-
-### Funcionalidades de Elastic Stack
-
-✅ **Configuración automática de:**
-- **Filebeat**: Inputs para diferentes tipos de logs
-- **Logstash**: Pipelines de procesamiento con filtros Grok/JSON
-- **Elasticsearch**: Templates de índice y pipelines de ingest
-- **Kibana**: Dashboards básicos y configuración de alertas
-
-✅ **Procesamiento de logs:**
-- **Texto plano simple**: Parsing con patrones Grok
-- **Texto multilínea**: Manejo de stacks traces y logs multilínea
-- **JSON estructurado**: Procesamiento directo de JSON
-- **Campos personalizados**: Metadata de servicio y entorno
 
 ## 📁 Estructura del JSON de Entrada
 
