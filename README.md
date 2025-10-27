@@ -2,8 +2,12 @@
 
 🚀 **Sistema completo para automatizar la configuración y despliegue de Nagios y Elastic Stack basado en formularios JSON**
 
-## 🆕 Novedades v1.2 - Mejoras en Automatización
+## 🆕 Novedades v1.3 - Sistema de Logging Completo
 
+- ✅ **Sistema de logging completo** con niveles DEBUG/INFO/WARNING/ERROR
+- ✅ **Archivo de log automático** (`monitoring_automator.log`) con rotación
+- ✅ **Logging detallado** en todos los componentes del sistema
+- ✅ **Trazabilidad completa** de procesos de generación y validación
 - ✅ **Descubrimiento automático mejorado** con análisis de respuestas HTTP para inferir tipos de servicio
 - ✅ **Plugins dinámicos** para checks personalizados sin modificar código
 - ✅ **Integración automática de health checks** detectados en endpoints
@@ -28,7 +32,7 @@ Todo basado en un formulario web que genera un JSON estructurado con la informac
 ## 🏗️ Arquitectura del Sistema
 
 ```
-Sistema de Automatización v1.1
+Sistema de Automatización v1.3
 ├── 📄 formulario_monitorización.html    # Formulario web para capturar datos
 ├── 📄 monitoring_automator.py           # Script principal (generación + despliegue opcional)
 ├── 📄 nagios_generator.py              # Generador de configs Nagios
@@ -36,6 +40,7 @@ Sistema de Automatización v1.1
 ├── 📄 validate_configs.py              # Validador de configuraciones
 ├── 📄 deployment.py                    # 🚀 NUEVO: Despliegue automático
 ├── 📄 config.yml                       # ⚙️ NUEVO: Configuración de infraestructura
+├── 📄 monitoring_automator.log         # 📋 NUEVO: Archivo de log automático
 ├──  output/                          # Configuraciones generadas
 ├── 📁 logs/                           # Logs del sistema
 ├── 📄 .gitignore                      # Control de versiones
@@ -485,12 +490,48 @@ pip install jinja2 pyyaml
 - Verificar permisos de archivos: `sudo chown nagios:nagios /etc/nagios/objects/*.cfg`
 - Revisar logs de Nagios: `tail -f /var/log/nagios/nagios.log`
 
-### Logs de Depuración
+### Sistema de Logging
 
-Para habilitar logs detallados:
+El sistema incluye logging completo para depuración y monitoreo:
 
-```bash
-python monitoring_automator.py servicio.json -v
+#### Archivo de Log Automático
+- **Ubicación**: `monitoring_automator.log` (creado automáticamente)
+- **Formato**: Timestamp, nivel, módulo, mensaje
+- **Rotación**: Archivo único con sobrescritura automática
+
+#### Niveles de Logging
+- **DEBUG**: Información detallada de procesos internos
+- **INFO**: Eventos principales y progreso
+- **WARNING**: Advertencias y configuraciones incompletas
+- **ERROR**: Errores que impiden la ejecución
+
+#### Componentes con Logging
+- **MonitoringAutomator**: Validación JSON, generación de configs
+- **NagiosGenerator**: Creación de hosts, servicios, contactos
+- **CheckManager**: Carga de plugins, generación de comandos
+- **ServiceDiscovery**: Auto-detección de servicios
+
+#### Ejemplo de Salida de Log
+```
+2025-10-27 08:27:43,123 - CheckManager - INFO - CheckManager inicializado con 6 checks disponibles
+2025-10-27 08:27:44,362 - MonitoringAutomator - INFO - Validando archivo JSON: gesform.json
+2025-10-27 08:27:44,369 - MonitoringAutomator - INFO - Servicio identificado: Gestión de formación (Prioridad: Baja)
+2025-10-27 08:27:44,380 - NagiosGenerator - INFO - Generando configuración de servicios...
+```
+
+#### Configuración de Logging
+El logging se configura automáticamente al ejecutar el sistema. Para personalizar:
+
+```python
+# En monitoring_automator.py
+logging.basicConfig(
+    level=logging.DEBUG,  # Cambiar nivel según necesidad
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('monitoring_automator.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 ```
 
 ## 🔒 Seguridad y GitHub
@@ -510,6 +551,7 @@ python monitoring_automator.py servicio.json -v
 - `logs/.gitkeep`
 - `config.yml.example`
 - `service_example.json`
+- `monitoring_automator.log` (se genera automáticamente, útil para debugging)
 
 ### ❌ Archivos que NUNCA deben subirse
 
@@ -540,6 +582,7 @@ python monitoring_automator.py service_example.json
 
 ## 📈 Mejoras Futuras
 
+- [x] **Mejorado:** Sistema de logging completo para depuración
 - [x] **Mejorado:** Descubrimiento automático de servicios con análisis de respuestas HTTP
 - [x] **Mejorado:** Soporte para plugins dinámicos de checks
 - [x] **Mejorado:** Integración automática de endpoints de health
@@ -575,5 +618,5 @@ Para soporte técnico o consultas:
 ---
 
 **Desarrollado por:** Equipo de Monitorización y Observabilidad
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 **Última actualización:** Octubre 2025

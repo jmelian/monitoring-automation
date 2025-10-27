@@ -224,7 +224,7 @@ class DeploymentManager:
             return False
 
     def _copy_nagios_configs(self, ssh: paramiko.SSHClient, local_dir: Path, server_config: Dict) -> bool:
-        """Copia archivos de configuración de Nagios al servidor"""
+        """Copia y fusiona archivos de configuración de Nagios al servidor"""
         try:
             sftp = ssh.open_sftp()
 
@@ -234,8 +234,32 @@ class DeploymentManager:
                 remote_path = f"{server_config['config_dir']}/{cfg_file}"
 
                 if local_path.exists():
-                    sftp.put(str(local_path), remote_path)
-                    self.logger.info(f"Archivo copiado: {cfg_file}")
+                    # Leer contenido local
+                    with open(local_path, 'r', encoding='utf-8') as f:
+                        new_content = f.read()
+
+                    # Leer contenido remoto existente
+                    try:
+                        stdin, stdout, stderr = ssh.exec_command(f"cat {remote_path}")
+                        exit_status = stdout.channel.recv_exit_status()
+                        if exit_status == 0:
+                            existing_content = stdout.read().decode('utf-8')
+                            # Fusionar: agregar nuevo contenido al final si no existe
+                            if new_content not in existing_content:
+                                merged_content = existing_content + "\n" + new_content
+                            else:
+                                merged_content = existing_content
+                        else:
+                            merged_content = new_content
+                    except:
+                        merged_content = new_content
+
+                    # Escribir contenido fusionado
+                    temp_remote = f"{remote_path}.tmp"
+                    ssh.exec_command(f"cat > {temp_remote} << 'EOF'\n{merged_content}\nEOF")
+                    ssh.exec_command(f"mv {temp_remote} {remote_path}")
+
+                    self.logger.info(f"Archivo fusionado y copiado: {cfg_file}")
 
                     # Cambiar permisos
                     ssh.exec_command(f"chmod 644 {remote_path}")
@@ -268,26 +292,37 @@ class DeploymentManager:
             return False
 
     def _restart_nagios_service(self, ssh: paramiko.SSHClient) -> bool:
-        """Reinicia el servicio de Nagios"""
+        """Recarga la configuración de Nagios (sin downtime completo)"""
         try:
             if self.config['general']['dry_run']:
-                self.logger.info("[DRY RUN] Se omitió reinicio de servicio Nagios")
+                self.logger.info("[DRY RUN] Se omitió recarga de servicio Nagios")
                 return True
 
-            stdin, stdout, stderr = ssh.exec_command("sudo systemctl restart nagios")
+            # Primero intentar recarga (menos downtime)
+            stdin, stdout, stderr = ssh.exec_command("sudo systemctl reload nagios")
             exit_status = stdout.channel.recv_exit_status()
 
             if exit_status == 0:
-                self.logger.info("Servicio de Nagios reiniciado exitosamente")
-                time.sleep(5)  # Esperar a que el servicio inicie
+                self.logger.info("Configuración de Nagios recargada exitosamente")
+                time.sleep(2)  # Esperar a que la recarga se aplique
                 return True
             else:
-                error = stderr.read().decode()
-                self.logger.error(f"Error reiniciando Nagios: {error}")
-                return False
+                # Si recarga falla, intentar reinicio
+                self.logger.warning("Recarga fallida, intentando reinicio...")
+                stdin, stdout, stderr = ssh.exec_command("sudo systemctl restart nagios")
+                exit_status = stdout.channel.recv_exit_status()
+
+                if exit_status == 0:
+                    self.logger.info("Servicio de Nagios reiniciado exitosamente")
+                    time.sleep(5)  # Esperar a que el servicio inicie
+                    return True
+                else:
+                    error = stderr.read().decode()
+                    self.logger.error(f"Error reiniciando Nagios: {error}")
+                    return False
 
         except Exception as e:
-            self.logger.error(f"Error reiniciando servicio de Nagios: {e}")
+            self.logger.error(f"Error recargando/reiniciando servicio de Nagios: {e}")
             return False
 
     def _verify_nagios_service(self, ssh: paramiko.SSHClient) -> bool:

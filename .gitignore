@@ -5,6 +5,7 @@ test_output/
 # Logs
 logs/*.log
 logs/deployment.log
+*.log
 
 # Archivos temporales
 *.tmp

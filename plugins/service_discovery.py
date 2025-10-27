@@ -36,46 +36,57 @@ class ServiceDiscovery:
         Returns:
             Configuración enriquecida con servicios detectados
         """
+        self.logger.info(f"Iniciando auto-detección de servicios con orquestador: {self.orchestrator}")
         if self.orchestrator == 'docker':
-            return self._discover_docker_services(base_config)
+            result = self._discover_docker_services(base_config)
         elif self.orchestrator == 'kubernetes':
-            return self._discover_k8s_services(base_config)
+            result = self._discover_k8s_services(base_config)
         elif self.orchestrator == 'docker-compose':
-            return self._discover_docker_compose_services(base_config)
+            result = self._discover_docker_compose_services(base_config)
         else:
             self.logger.info("No se detectó orquestador, usando configuración manual")
-            return base_config
+            result = base_config
+
+        self.logger.info("Auto-detección de servicios completada")
+        return result
 
     def _discover_docker_services(self, base_config: Dict[str, Any]) -> Dict[str, Any]:
         """Descubre servicios en Docker"""
+        self.logger.info("Iniciando auto-detección de servicios Docker...")
         try:
             import docker
             client = docker.from_env()
+            self.logger.debug("Cliente Docker conectado")
 
             # Obtener contenedores corriendo
             containers = client.containers.list()
+            self.logger.info(f"Contenedores encontrados: {len(containers)}")
 
             discovered_services = []
             discovered_hosts = []
 
             for container in containers:
+                self.logger.debug(f"Analizando contenedor: {container.name}")
                 service_info = self._analyze_container(container)
                 if service_info:
                     discovered_services.append(service_info)
+                    self.logger.debug(f"Servicio detectado: {service_info.get('name')}")
 
                 host_info = self._extract_host_info(container)
                 if host_info:
                     discovered_hosts.append(host_info)
+                    self.logger.debug(f"Host detectado: {host_info.get('identifier')}")
 
             # Enriquecer configuración
             enriched_config = base_config.copy()
+            self.logger.info(f"Servicios descubiertos: {len(discovered_services)}, Hosts descubiertos: {len(discovered_hosts)}")
 
             if discovered_services:
                 existing_deps = enriched_config.get('dependencies', [])
-                # Evitar duplicados
                 existing_names = {dep.get('name', '') for dep in existing_deps}
                 new_deps = [dep for dep in discovered_services if dep.get('name', '') not in existing_names]
                 enriched_config['dependencies'] = existing_deps + new_deps
+                self.logger.info(f"Dependencias añadidas: {len(new_deps)}")
 
             # Actualizar hosts si es necesario
             if discovered_hosts:
@@ -83,6 +94,7 @@ class ServiceDiscovery:
                     existing_host_ids = {host.get('identifier', '') for host in env.get('hosts', [])}
                     new_hosts = [host for host in discovered_hosts if host.get('identifier', '') not in existing_host_ids]
                     env['hosts'].extend(new_hosts)
+                    self.logger.info(f"Hosts añadidos al entorno {env.get('name')}: {len(new_hosts)}")
 
             return enriched_config
 
@@ -176,6 +188,7 @@ class ServiceDiscovery:
     def _analyze_container(self, container) -> Optional[Dict[str, Any]]:
         """Analiza un contenedor Docker y extrae información de servicio"""
         try:
+            self.logger.debug(f"Analizando contenedor: {container.name}")
             container_info = container.attrs
             config = container_info.get('Config', {})
             network_settings = container_info.get('NetworkSettings', {})
@@ -183,6 +196,7 @@ class ServiceDiscovery:
             # Extraer puertos expuestos
             ports = config.get('ExposedPorts', {})
             if not ports:
+                self.logger.debug(f"Contenedor {container.name} no tiene puertos expuestos")
                 return None
 
             # Determinar protocolo basado en puertos
@@ -206,6 +220,7 @@ class ServiceDiscovery:
                             'port': port_num,
                             'check_protocol': protocol if protocol in ['tcp', 'udp'] else 'tcp'
                         })
+                        self.logger.debug(f"Puerto detectado: {port_num}/{protocol}")
                         break
 
             # Parámetros específicos para Docker
@@ -216,6 +231,7 @@ class ServiceDiscovery:
 
             # Intentar detectar tipo de servicio basado en imagen
             image = config.get('Image', '').lower()
+            self.logger.debug(f"Imagen del contenedor: {image}")
             if 'nginx' in image:
                 service_info.update({
                     'type': 'Web Server',
@@ -236,8 +252,10 @@ class ServiceDiscovery:
             # Si es HTTP/HTTPS, analizar respuesta para mejor detección
             if service_info.get('check_protocol') == 'http':
                 host_address = container.name  # Usar nombre como host para análisis
+                self.logger.debug(f"Analizando servicio HTTP en {host_address}:{port_num}")
                 self._enhance_http_service_info(service_info, host_address, port_num)
 
+            self.logger.debug(f"Servicio analizado: {service_info.get('name')} ({service_info.get('type')})")
             return service_info
 
         except Exception as e:
@@ -247,26 +265,32 @@ class ServiceDiscovery:
     def _enhance_http_service_info(self, service_info: Dict[str, Any], host: str, port: str):
         """Mejora la información de servicio HTTP analizando la respuesta"""
         if not REQUESTS_AVAILABLE:
+            self.logger.debug("Requests no disponible, omitiendo análisis HTTP")
             return
 
         try:
+            self.logger.debug(f"Mejorando información HTTP para {host}:{port}")
             # Construir URL base
             scheme = 'https' if port == '443' else 'http'
             base_url = f"{scheme}://{host}:{port}"
+            self.logger.debug(f"URL base: {base_url}")
 
             # Detectar health endpoints y analizar
             health_endpoints = self.detect_health_endpoints(base_url)
             if health_endpoints:
+                self.logger.debug(f"Health endpoints encontrados: {len(health_endpoints)}")
                 # Usar el primero encontrado como endpoint principal
                 primary_endpoint = health_endpoints[0]
                 service_info['check_params']['url'] = primary_endpoint['endpoint'].replace(base_url, '')
                 service_info['check_params']['expected_format'] = primary_endpoint['format']
+                self.logger.debug(f"Endpoint primario: {primary_endpoint['endpoint']} ({primary_endpoint['format']})")
 
                 # Si es JSON, intentar inferir más detalles
                 if primary_endpoint['format'] == 'JSON':
                     try:
                         response = requests.get(primary_endpoint['endpoint'], timeout=5)
                         data = response.json()
+                        self.logger.debug(f"Respuesta JSON analizada: {len(data)} campos")
                         # Buscar campos comunes para inferir tipo de servicio
                         if 'status' in data or 'health' in data:
                             service_info['type'] = 'Health Check Service'
@@ -274,15 +298,17 @@ class ServiceDiscovery:
                         elif 'database' in str(data).lower() or 'db' in str(data).lower():
                             service_info['type'] = 'Database API'
                             service_info['effect'] = 'API de base de datos no accesible'
-                    except:
-                        pass
+                    except Exception as e:
+                        self.logger.debug(f"Error analizando respuesta JSON: {e}")
 
             # Analizar respuesta raíz para más inferencia
             try:
+                self.logger.debug(f"Analizando respuesta raíz: {base_url}")
                 response = requests.get(base_url, timeout=5)
                 if response.status_code == 200:
                     content_type = response.headers.get('content-type', '').lower()
                     text = response.text.lower()
+                    self.logger.debug(f"Content-type: {content_type}, Status: {response.status_code}")
 
                     # Inferir tipo basado en content-type y contenido
                     if 'text/html' in content_type:
@@ -303,8 +329,12 @@ class ServiceDiscovery:
                         service_info['type'] = 'Generic HTTP Service'
                         service_info['effect'] = 'Servicio HTTP no disponible'
 
-            except:
-                pass  # Si falla, mantener detección básica
+                    self.logger.debug(f"Tipo de servicio inferido: {service_info.get('type')}")
+                else:
+                    self.logger.debug(f"Respuesta no exitosa: {response.status_code}")
+
+            except Exception as e:
+                self.logger.debug(f"Error analizando respuesta raíz: {e}")
 
         except Exception as e:
             self.logger.debug(f"Error mejorando info HTTP para {host}:{port}: {e}")
@@ -476,22 +506,28 @@ class ServiceDiscovery:
         ]
 
         found_endpoints = []
+        self.logger.debug(f"Buscando health endpoints en: {base_url}")
 
         for path in health_paths:
             try:
                 url = f"{base_url.rstrip('/')}{path}"
+                self.logger.debug(f"Probando endpoint: {url}")
                 response = requests.get(url, timeout=5)
 
                 if response.status_code == 200:
+                    format_detected = self._detect_response_format(response)
                     found_endpoints.append({
                         'endpoint': url,
-                        'format': self._detect_response_format(response),
+                        'format': format_detected,
                         'status_code': response.status_code
                     })
+                    self.logger.debug(f"Endpoint encontrado: {url} ({format_detected})")
 
-            except:
+            except Exception as e:
+                self.logger.debug(f"Endpoint no disponible: {url} - {e}")
                 continue
 
+        self.logger.debug(f"Total endpoints encontrados: {len(found_endpoints)}")
         return found_endpoints
 
     def _detect_response_format(self, response: requests.Response) -> str:
@@ -517,14 +553,25 @@ def discover_services(config: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Configuración enriquecida
     """
+    logger = logging.getLogger('ServiceDiscovery')
+    logger.info("Iniciando descubrimiento de servicios para todos los entornos")
+
     # Por cada entorno, ejecutar discovery
-    for env in config.get('envs', []):
+    envs = config.get('envs', [])
+    logger.debug(f"Procesando {len(envs)} entornos")
+
+    for i, env in enumerate(envs):
+        env_name = env.get('name', f'env_{i}')
+        orchestrator = env.get('orchestrator', 'none')
+        logger.info(f"Procesando entorno {i+1}/{len(envs)}: {env_name} (orquestador: {orchestrator})")
+
         orchestrator_config = {
-            'orchestrator': env.get('orchestrator', 'none'),
+            'orchestrator': orchestrator,
             'config': env.get('orchestrator_config', {})
         }
 
         discovery = ServiceDiscovery(orchestrator_config)
         config = discovery.discover_services(config)
 
+    logger.info("Descubrimiento de servicios completado para todos los entornos")
     return config

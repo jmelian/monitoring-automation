@@ -6,6 +6,7 @@ Genera configuraciones de Nagios basadas en el JSON del formulario de monitoriza
 
 import json
 import os
+import logging
 from datetime import datetime
 from jinja2 import Template
 from plugins.check_manager import check_manager
@@ -18,9 +19,11 @@ class NagiosConfigGenerator:
         self.data = json_data
         self.output_dir = output_dir
         self.templates_dir = "templates/nagios"
+        self.logger = logging.getLogger('NagiosGenerator')
 
         # Crear directorio de salida si no existe
         os.makedirs(output_dir, exist_ok=True)
+        self.logger.debug(f"Directorio de salida Nagios creado: {output_dir}")
 
         # Mapear prioridades a check intervals y severidad
         self.priority_mapping = {
@@ -32,6 +35,7 @@ class NagiosConfigGenerator:
 
         # Usar check_manager para protocolos extensibles
         self.check_manager = check_manager
+        self.logger.debug("NagiosConfigGenerator inicializado")
 
     def _get_priority_config(self, priority):
         """Obtiene configuración de check basada en prioridad"""
@@ -47,14 +51,20 @@ class NagiosConfigGenerator:
 
     def generate_hosts_config(self):
         """Genera configuración de hosts basada en entornos"""
+        self.logger.info("Generando configuración de hosts...")
         hosts_config = []
         hosts_data = []
 
-        for env in self.data.get("envs", []):
+        envs = self.data.get("envs", [])
+        self.logger.debug(f"Procesando {len(envs)} entornos para hosts")
+
+        for env in envs:
             env_name = env.get("name", "unknown")
             env_desc = env.get("desc", "")
+            hosts_in_env = env.get("hosts", [])
+            self.logger.debug(f"Entorno {env_name}: {len(hosts_in_env)} hosts")
 
-            for host in env.get("hosts", []):
+            for host in hosts_in_env:
                 host_id = self._generate_host_id(env_name, host.get("type", "host"), host.get("identifier", ""))
                 host_address = host.get("address", host.get("identifier", ""))
 
@@ -82,6 +92,7 @@ class NagiosConfigGenerator:
                 }
 
                 hosts_data.append(host_config)
+                self.logger.debug(f"Host configurado: {host_id} ({host_address})")
 
                 # Template para configuración de host
                 host_template = Template("""
@@ -102,17 +113,23 @@ define host {
 """)
                 hosts_config.append(host_template.render(**host_config))
 
+        self.logger.info(f"Configuración de hosts generada: {len(hosts_data)} hosts")
         return "\n".join(hosts_config), hosts_data
 
     def generate_contacts_config(self):
         """Genera configuración de contactos basada en responsables"""
+        self.logger.info("Generando configuración de contactos...")
         contacts_config = []
         contacts_data = []
 
-        for resp in self.data.get("responsables", []):
+        responsables = self.data.get("responsables", [])
+        self.logger.debug(f"Procesando {len(responsables)} responsables")
+
+        for resp in responsables:
             contact_id = f"contact_{resp.get('nombre', '').lower().replace(' ', '_')}"
             contact_name = resp.get("nombre", "")
             contact_email = resp.get("email", "")
+            self.logger.debug(f"Contacto: {contact_name} <{contact_email}>")
 
             contact_config = {
                 "contact_id": contact_id,
@@ -148,6 +165,7 @@ define contact {
         # Crear contactgroup para el servicio
         service_name = self.data.get("identification", {}).get("service_name", "unknown")
         contactgroup_id = f"cg_{service_name.lower().replace(' ', '_')}"
+        self.logger.debug(f"Contactgroup creado: {contactgroup_id}")
 
         contactgroup_template = Template("""
 define contactgroup {
@@ -164,20 +182,30 @@ define contactgroup {
             contacts_data=contacts_data
         ))
 
+        self.logger.info(f"Configuración de contactos generada: {len(contacts_data)} contactos")
         return "\n".join(contacts_config), contacts_data
 
     def generate_services_config(self):
         """Genera configuración de servicios basada en dependencias"""
+        self.logger.info("Generando configuración de servicios...")
         services_config = []
         services_data = []
 
         service_name = self.data.get("identification", {}).get("service_name", "unknown")
         priority = self.data.get("identification", {}).get("priority", "Media")
         priority_config = self._get_priority_config(priority)
+        self.logger.debug(f"Servicio: {service_name}, Prioridad: {priority}")
+
+        dependencies = self.data.get("dependencies", [])
+        self.logger.debug(f"Procesando {len(dependencies)} dependencias")
 
         # Crear servicio para health API si existe
         if self.data.get("health_api"):
             health_details = self.data.get("health_api_details", {})
+            endpoint = health_details.get('endpoint', '')
+            interval = health_details.get("interval_sec", 300)
+            self.logger.info(f"Configurando Health API: {endpoint} (intervalo: {interval}s)")
+
             for env in self.data.get("envs", []):
                 env_name = env.get("name", "")
 
@@ -187,8 +215,8 @@ define contactgroup {
                     "service_id": service_id,
                     "service_description": f"Health Check - {service_name}",
                     "host_name": "*",  # Aplicar a todos los hosts del servicio
-                    "check_command": f"check_http -H {health_details.get('endpoint', '').replace('http://', '').replace('https://', '').split('/')[0]} -u {health_details.get('endpoint', '')}",
-                    "check_interval": health_details.get("interval_sec", 300),
+                    "check_command": f"check_http -H {endpoint.replace('http://', '').replace('https://', '').split('/')[0]} -u {endpoint}",
+                    "check_interval": interval,
                     "retry_interval": 60,
                     "max_check_attempts": 3,
                     "notification_interval": 60,
@@ -196,6 +224,7 @@ define contactgroup {
                 }
 
                 services_data.append(service_config)
+                self.logger.debug(f"Servicio Health API creado: {service_id}")
 
                 service_template = Template("""
 define service {
@@ -216,23 +245,32 @@ define service {
                 services_config.append(service_template.render(**service_config))
 
         # Crear servicios para cada dependencia
-        for dep in self.data.get("dependencies", []):
+        for dep in dependencies:
             dep_name = dep.get("name", "")
             dep_port = dep.get("port", "")
             dep_protocol = dep.get("check_protocol", "tcp")
             dep_impact = dep.get("impact", "Media")
+            self.logger.debug(f"Dependencia: {dep_name} ({dep_protocol}, impacto: {dep_impact})")
 
-            # Saltar dependencias sin puerto o protocolo definido
-            if not dep_port or not dep_protocol:
+            # Para Docker checks, si no hay puerto, usar check_params para container_name
+            if dep_protocol == "docker" and not dep_port:
+                if not dep.get("check_params", {}).get("container_name"):
+                    self.logger.warning(f"Dependencia Docker '{dep_name}' sin puerto ni container_name definido, saltando...")
+                    continue
+            elif not dep_port and dep_protocol != "docker":
+                # Para otros protocolos, saltar si no hay puerto
+                self.logger.warning(f"Dependencia '{dep_name}' sin puerto definido, saltando...")
                 continue
 
             impact_config = self._get_priority_config(dep_impact)
 
             for env in self.data.get("envs", []):
                 env_name = env.get("name", "")
+                hosts_in_env = env.get("hosts", [])
+                self.logger.debug(f"Entorno {env_name}: {len(hosts_in_env)} hosts")
 
                 # Crear servicio para cada host en el entorno
-                for host in env.get("hosts", []):
+                for host in hosts_in_env:
                     host_id = self._generate_host_id(env_name, host.get("type", "host"), host.get("identifier", ""))
 
                     service_id = self._generate_service_id(service_name, dep_name, env_name)
@@ -240,6 +278,7 @@ define service {
                     # Usar check_manager para generar comando
                     host_address = host.get("address", host.get("identifier", ""))
                     check_command = self.check_manager.get_nagios_command(dep, host_address)
+                    self.logger.debug(f"Comando generado para {dep_name}: {check_command}")
 
                     service_config = {
                         "service_id": service_id,
@@ -254,6 +293,7 @@ define service {
                     }
 
                     services_data.append(service_config)
+                    self.logger.debug(f"Servicio creado: {service_id} en host {host_id}")
 
                     service_template = Template("""
 define service {
@@ -273,6 +313,7 @@ define service {
 """)
                     services_config.append(service_template.render(**service_config))
 
+        self.logger.info(f"Configuración de servicios generada: {len(services_data)} servicios")
         return "\n".join(services_config), services_data
 
     def generate_commands_config(self):
@@ -338,7 +379,7 @@ define command {
 
     def generate_all_configs(self):
         """Genera todas las configuraciones de Nagios"""
-        print("Generando configuraciones de Nagios...")
+        self.logger.info("Generando todas las configuraciones de Nagios...")
 
         # Generar cada tipo de configuración
         hosts_cfg, hosts_data = self.generate_hosts_config()
@@ -347,9 +388,10 @@ define command {
         commands_cfg = self.generate_commands_config()
 
         # Crear configuración principal de Nagios
+        service_name = self.data.get('identification', {}).get('service_name', 'Unknown')
         main_cfg = f"""
 # Configuración de Nagios generada automáticamente
-# Servicio: {self.data.get('identification', {}).get('service_name', 'Unknown')}
+# Servicio: {service_name}
 # Fecha de generación: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 # Archivo generado por el sistema de automatización de monitorización
 
@@ -378,40 +420,45 @@ cfg_file=/etc/nagios/objects/commands.cfg
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
-            print(f"OK Archivo generado: {filepath}")
+            self.logger.info(f"Archivo generado: {filepath}")
 
-        return saved_files, {
+        metadata = {
             "hosts": hosts_data,
             "contacts": contacts_data,
             "services": services_data
         }
 
+        self.logger.info(f"Configuración de Nagios completada: {len(saved_files)} archivos, {len(hosts_data)} hosts, {len(services_data)} servicios, {len(contacts_data)} contactos")
+        return saved_files, metadata
+
 
 def generate_nagios_from_json(json_file, output_dir="output/nagios"):
     """Función principal para generar configuración de Nagios desde JSON"""
+    logger = logging.getLogger('NagiosGenerator')
     try:
+        logger.info(f"Iniciando generación de configuración Nagios desde: {json_file}")
         with open(json_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         generator = NagiosConfigGenerator(data, output_dir)
         files, metadata = generator.generate_all_configs()
 
-        print(f"\nOK Configuracion de Nagios generada exitosamente!")
-        print(f"OK Archivos generados: {len(files)}")
-        print(f"OK Hosts configurados: {len(metadata['hosts'])}")
-        print(f"OK Servicios configurados: {len(metadata['services'])}")
-        print(f"OK Contactos configurados: {len(metadata['contacts'])}")
+        logger.info("Configuración de Nagios generada exitosamente!")
+        logger.info(f"Archivos generados: {len(files)}")
+        logger.info(f"Hosts configurados: {len(metadata['hosts'])}")
+        logger.info(f"Servicios configurados: {len(metadata['services'])}")
+        logger.info(f"Contactos configurados: {len(metadata['contacts'])}")
 
         return files, metadata
 
     except FileNotFoundError:
-        print(f"Error: No se encontró el archivo JSON: {json_file}")
+        logger.error(f"No se encontró el archivo JSON: {json_file}")
         return [], {}
     except json.JSONDecodeError as e:
-        print(f"Error: Error de formato JSON: {e}")
+        logger.error(f"Error de formato JSON: {e}")
         return [], {}
     except Exception as e:
-        print(f"Error inesperado: {e}")
+        logger.error(f"Error inesperado: {e}")
         return [], {}
 
 
