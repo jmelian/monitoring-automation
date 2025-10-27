@@ -609,13 +609,6 @@ Para contribuir al proyecto:
 
 Este proyecto está bajo la licencia MIT. Ver archivo `LICENSE` para más detalles.
 
-## 🆘 Soporte
-
-Para soporte técnico o consultas:
-
-- 📧 Email: soporte@empresa.com
-- 📞 Teléfono: +34 900 000 000
-- 🏢 Oficina: Planta 1, Despacho 15
 
 ---
 
