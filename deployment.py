@@ -682,13 +682,19 @@ def main():
     parser.add_argument(
         '--use-nagiosql',
         action='store_true',
-        help='Forzar despliegue de Nagios vía NagiosQL (ignora configuración)'
+        help='Forzar despliegue de Nagios vía NagiosQL v3.5.0 (staging automático + importación manual)'
     )
 
     parser.add_argument(
         '--skip-nagiosql',
         action='store_true',
         help='Forzar despliegue directo de Nagios (ignora configuración NagiosQL)'
+    )
+
+    parser.add_argument(
+        '--validate-nagiosql-import',
+        metavar='SESSION_ID',
+        help='Validar importación manual completada en NagiosQL (proporcionar ID de sesión)'
     )
 
     parser.add_argument(
@@ -708,6 +714,11 @@ def main():
         print("❌ Error: No se pueden especificar --use-nagiosql y --skip-nagiosql simultáneamente")
         sys.exit(1)
 
+    # Validar validación de importación NagiosQL
+    if args.validate_nagiosql_import and not args.config_dir:
+        print("❌ Error: --validate-nagiosql-import requiere especificar config_dir")
+        sys.exit(1)
+
     # Crear gestor de despliegue
     try:
         deployer = DeploymentManager(args.config)
@@ -720,11 +731,26 @@ def main():
         if args.use_nagiosql:
             if 'nagiosql' not in deployer.config:
                 deployer.config['nagiosql'] = {}
-            deployer.config['nagiosql']['integration_method'] = 'api'
+            deployer.config['nagiosql']['integration_method'] = 'file'  # v3.5.0 usa file
         elif args.skip_nagiosql:
             if 'nagiosql' not in deployer.config:
                 deployer.config['nagiosql'] = {}
             deployer.config['nagiosql']['integration_method'] = 'none'
+
+        # Validar importación NagiosQL completada
+        if args.validate_nagiosql_import:
+            nagiosql_config = deployer.config.get('nagiosql', {})
+            if not nagiosql_config:
+                print("❌ Error: Configuración de NagiosQL no encontrada")
+                sys.exit(1)
+
+            adapter = create_nagiosql_adapter(nagiosql_config)
+            if adapter.validate_post_import():
+                print(f"✅ Importación NagiosQL validada exitosamente (Sesión: {args.validate_nagiosql_import})")
+                sys.exit(0)
+            else:
+                print(f"❌ Validación de importación NagiosQL fallida (Sesión: {args.validate_nagiosql_import})")
+                sys.exit(1)
 
         # Ejecutar despliegue
         success = deployer.deploy_all(

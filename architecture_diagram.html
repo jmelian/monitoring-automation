@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Diagram: Gestión de Formación</title>
+    <script type="module">
+        import mermaid from 'https://cdn.skypack.dev/mermaid@10.6.1';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .description {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Architecture Diagram: Gestión de Formación</h1>
+
+        <div class="description">
+            <p>Based on the JSON configuration from <code>gesform.json</code>, this diagram visualizes the system architecture of the "Gestión de formación" (Training Management) platform.</p>
+
+            <h2>Key Components:</h2>
+            <ul>
+                <li><strong>Main Service:</strong> Django-based platform with Nginx proxy and PostgreSQL database</li>
+                <li><strong>Dependencies:</strong> LDAP for authentication, internal database, and Django backend</li>
+                <li><strong>Environment:</strong> Production environment (EXP) with containerized deployment</li>
+                <li><strong>Health API:</strong> Endpoint for health checks</li>
+                <li><strong>Logs:</strong> Various log files with centralized logging</li>
+            </ul>
+
+            <h2>System Boundary:</h2>
+            <p>The main application system "Gestión de formación" is grouped in a bounded box, containing:</p>
+            <ul>
+                <li><strong>Nginx Proxy</strong> - entry point</li>
+                <li><strong>Django Application</strong> - core business logic</li>
+                <li><strong>PostgreSQL Database</strong> - data storage</li>
+                <li><strong>Health API</strong> - health check endpoint</li>
+                <li><strong>Log Files</strong> - application logs</li>
+            </ul>
+
+            <h2>Data Flow:</h2>
+            <ol>
+                <li>Users access the system through Nginx</li>
+                <li>Nginx forwards requests to Django application</li>
+                <li>Django interacts with PostgreSQL for data and LDAP for authentication</li>
+                <li>Health API provides system status</li>
+                <li>Logs are centralized for analysis</li>
+            </ol>
+        </div>
+
+        <div class="mermaid">
+graph TD
+    A[Users/Clients] --> B[Nginx Proxy<br/>Container: nginx_proxy]
+    B --> C[Django Application<br/>Container: django_app<br/>Port: 8000]
+    C --> D[PostgreSQL Database<br/>Container: postgres_db]
+    C --> E[LDAP Server<br/>External Authentication<br/>Port: 5432]
+
+    F[Health API<br/>Endpoint: /api/health/] --> C
+
+    I[Log Files<br/>formacion.log<br/>security.log<br/>business.log<br/>anomaly.log<br/>performance.log<br/>formacion.json] --> J[Centralized Logging<br/>Elastic Stack]
+
+    subgraph main_app [Gestión de formación]
+        B
+        C
+        D
+        F
+        I
+    end
+
+    style A fill:#e1f5fe
+    style E fill:#ffebee
+    style J fill:#b2dfdb
+        </div>
+
+        <div class="description">
+            <p><em>This diagram represents a typical containerized web application with external authentication, comprehensive monitoring, and centralized logging based on the JSON configuration.</em></p>
+        </div>
+    </div>
+</body>
+</html>

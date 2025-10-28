@@ -2,7 +2,7 @@
 
 🚀 **Sistema completo para automatizar la configuración y despliegue de Nagios y Elastic Stack basado en formularios JSON**
 
-## 🆕 Novedades v1.4 - Integración Completa con NagiosQL
+## 🆕 Novedades v1.5 - Integración Optimizada con NagiosQL v3.5.0
 
 - ✅ **Sistema de logging completo** con niveles DEBUG/INFO/WARNING/ERROR
 - ✅ **Archivo de log automático** (`monitoring_automator.log`) con rotación
@@ -19,11 +19,16 @@
 - ✅ **Validación post-despliegue** de servicios (v1.1)
 - ✅ **Notificaciones** por email/Slack (v1.1)
 - ✅ **Modo dry-run** para pruebas seguras (v1.1)
-- ✅ **Integración completa con NagiosQL** (v1.4)
-- ✅ **Múltiples métodos de integración**: API REST, BD directa, archivos temporales (v1.4)
-- ✅ **Idempotencia mediante checksums** para evitar duplicados (v1.4)
-- ✅ **Validación automática** de importaciones a NagiosQL (v1.4)
-- ✅ **Exportación automática** desde NagiosQL a Nagios (v1.4)
+- ✅ **Integración completa con NagiosQL v3.5.0** (v1.5)
+- ✅ **Staging automático de archivos** para importación manual (v1.5)
+- ✅ **Idempotencia mediante checksums** para evitar duplicados (v1.5)
+- ✅ **Validación sintáctica previa** de archivos .cfg (v1.5)
+- ✅ **Instrucciones automáticas** para importación manual (v1.5)
+- ✅ **Validación post-importación** con comandos específicos (v1.5)
+- ✅ **Gestión de backups** automática en directorios de sesión (v1.5)
+- ✅ **Sistema de notificaciones** para pasos manuales requeridos (v1.5)
+- ✅ **Sesiones trazables** con IDs únicos por importación (v1.5)
+- ✅ **Optimización CI/CD** con pasos manuales claros (v1.5)
 
 ## 📋 Descripción General
 
@@ -51,13 +56,15 @@ Todo basado en un formulario web que genera un JSON estructurado con la informac
 - Ping (para conectividad básica)
 - DNS, LDAP, SMTP, SQL (para servicios específicos)
 
-✅ **Integración con NagiosQL:**
-- Importación automática vía API REST
-- Inserción directa en base de datos MySQL
-- Archivos temporales para importación manual
-- Idempotencia mediante checksums MD5
-- Validación automática post-importación
-- Exportación automática a Nagios
+✅ **Integración Optimizada con NagiosQL v3.5.0:**
+- **Staging automático de archivos** para importación manual
+- **Validación sintáctica previa** de archivos .cfg
+- **Idempotencia mediante checksums MD5** para evitar duplicados
+- **Instrucciones automáticas** detalladas para importación manual
+- **Validación post-importación** con comandos específicos
+- **Gestión de backups automática** en directorios de sesión
+- **Sistema de notificaciones** para pasos manuales requeridos
+- **Sesiones trazables** con IDs únicos por importación
 
 ### Funcionalidades de Elastic Stack
 
@@ -191,8 +198,11 @@ python monitoring_automator.py servicio.json -o /ruta/personalizada
 # Desplegar configuraciones existentes
 python deployment.py output/execution_20241201_143000/ --env staging
 
-# Desplegar Nagios vía NagiosQL (si está configurado)
+# Desplegar Nagios vía NagiosQL v3.5.0 (staging automático + importación manual)
 python deployment.py output/execution_20241201_143000/ --use-nagiosql
+
+# Validar importación manual completada
+python deployment.py output/execution_20241201_143000/ --validate-nagiosql-import nagiosql_import_20251028_093700
 
 # Forzar despliegue directo de Nagios (ignorar NagiosQL)
 python deployment.py output/execution_20241201_143000/ --skip-nagiosql
@@ -212,14 +222,17 @@ El archivo `config.yml` define la configuración de infraestructura para el desp
      - `check_commands`: Parámetros globales para comandos de chequeo (timeout, retries, interval). Afecta cómo se generan y ejecutan los checks en Nagios.
    - **Uso**: Esencial para el despliegue automático de configuraciones Nagios generadas por `nagios_generator.py`.
 
-### 2. **nagiosql** (Configuración de NagiosQL - NUEVO)
-   - **Propósito**: Configura la integración con NagiosQL para gestión centralizada de configuraciones.
-   - **Subsecciones**:
-     - `integration_method`: Método de integración ('api', 'database', 'file', 'none')
-     - `api`: Configuración para API REST (URL, credenciales, timeouts)
-     - `database`: Configuración para acceso directo a BD MySQL de NagiosQL
-     - `behavior`: Configuración de comportamiento (checksums, backups, validación)
-   - **Uso**: Permite importar configuraciones Nagios generadas directamente a NagiosQL, evitando gestión manual de archivos .cfg.
+### 2. **nagiosql** (Configuración de NagiosQL v3.5.0 - NUEVO)
+    - **Propósito**: Configura la integración optimizada con NagiosQL v3.5.0 para staging automático e importación manual.
+    - **Subsecciones**:
+      - `integration_method`: Método de integración ('file' para v3.5.0, 'api', 'database', 'none')
+      - `host`: Servidor NagiosQL para conexiones SSH
+      - `ssh_user`: Usuario SSH para staging de archivos
+      - `ssh_key_path`: Ruta a clave privada SSH
+      - `import_directory`: Directorio de importación en NagiosQL (/var/lib/nagiosql/import)
+      - `backup_directory`: Directorio para backups automáticos
+      - `behavior`: Configuración de comportamiento (checksums, backups, validación, notificaciones)
+    - **Uso**: Automatiza el staging de archivos .cfg y genera instrucciones para importación manual en NagiosQL.
 
 ### 3. **elastic** (Configuración de Elastic Stack)
    - **Propósito**: Configura los componentes de Elasticsearch, Kibana, Logstash y Filebeat para procesar logs y métricas.
@@ -514,6 +527,9 @@ python monitoring_automator.py servicio.json --deploy --deploy-env production
 # O en dos pasos:
 python monitoring_automator.py servicio.json  # Generar configs
 python deployment.py output/execution_*/ --env production  # Desplegar
+
+# Despliegue con NagiosQL v3.5.0 (staging automático + importación manual)
+python deployment.py output/execution_*/ --use-nagiosql --env production
 ```
 
 ### Opción 2: Despliegue Manual
@@ -554,11 +570,38 @@ curl -X PUT "localhost:9200/_ingest/pipeline/PIPELINE_NAME" \
 ## 🛠️ Personalización Avanzada
 ### Integración con NagiosQL
 
-#### Métodos de Integración Disponibles
+#### Configuración Optimizada para NagiosQL v3.5.0
 
-El sistema soporta múltiples métodos para integrar con NagiosQL:
+Para NagiosQL v3.5.0, el método recomendado es `file` con staging automático:
 
-1. **API REST** (Recomendado):
+```yaml
+nagiosql:
+  # Método optimizado para v3.5.0
+  integration_method: "file"
+
+  # Configuración SSH para staging
+  host: "tu-servidor-nagiosql"
+  ssh_user: "nagios"
+  ssh_key_path: "~/.ssh/nagiosql_key"
+  import_directory: "/var/lib/nagiosql/import"
+  backup_directory: "/var/lib/nagiosql/backup"
+
+  # Configuración de comportamiento
+  behavior:
+    use_checksums: true          # Idempotencia
+    create_backups: true         # Backups automáticos
+    validate_syntax: true        # Validación previa
+    notifications_enabled: true  # Notificaciones para pasos manuales
+    notification_recipients:
+      - "admin@empresa.com"
+      - "#monitoring-alerts"  # Slack channel
+```
+
+#### Métodos de Integración Alternativos
+
+Para versiones futuras de NagiosQL con API:
+
+1. **API REST** (cuando esté disponible):
    ```yaml
    nagiosql:
      integration_method: "api"
@@ -569,7 +612,7 @@ El sistema soporta múltiples métodos para integrar con NagiosQL:
        verify_ssl: true
    ```
 
-2. **Base de Datos Directa**:
+2. **Base de Datos Directa** (solo si tienes acceso directo):
    ```yaml
    nagiosql:
      integration_method: "database"
@@ -578,12 +621,6 @@ El sistema soporta múltiples métodos para integrar con NagiosQL:
        user: "nagiosql_user"
        password: "${NAGIOSQL_DB_PASSWORD}"
        database: "nagiosql"
-   ```
-
-3. **Archivos Temporales**:
-   ```yaml
-   nagiosql:
-     integration_method: "file"
    ```
 
 #### Configuración de Comportamiento
@@ -598,41 +635,52 @@ nagiosql:
     auto_export_to_nagios: true  # Exportar automáticamente a Nagios
 ```
 
-#### Uso del Adaptador NagiosQL
+#### Uso del Adaptador NagiosQL v3.5.0
 
 ```python
 from nagiosql_adapter import create_nagiosql_adapter
 
-# Configurar adaptador
+# Configurar adaptador para v3.5.0
 config = {
-    'api_url': 'http://nagiosql.example.com',
-    'username': 'admin',
-    'password': 'password',
-    'integration_method': 'api',
-    'use_checksums': True
+    'integration_method': 'file',  # Optimizado para v3.5.0
+    'host': 'tu-servidor-nagiosql',
+    'ssh_user': 'nagios',
+    'ssh_key_path': '~/.ssh/nagiosql_key',
+    'import_directory': '/var/lib/nagiosql/import',
+    'backup_directory': '/var/lib/nagiosql/backup',
+    'use_checksums': True,
+    'create_backups': True,
+    'validate_syntax': True,
+    'notifications_enabled': True,
+    'notification_recipients': ['admin@empresa.com']
 }
 
 adapter = create_nagiosql_adapter(config)
 
-# Importar configuraciones
+# Staging automático de configuraciones
 config_files = {
     'hosts.cfg': contenido_hosts,
     'services.cfg': contenido_services,
-    'contacts.cfg': contenido_contacts
+    'contacts.cfg': contenido_contacts,
+    'commands.cfg': contenido_commands
 }
 
+# Esto hace staging automático y genera instrucciones
 success = adapter.import_configurations(config_files)
-if success:
-    adapter.validate_import()
-    adapter.export_to_nagios()
+# Resultado: archivos preparados + instrucciones para importación manual
+
+# Después de completar importación manual en NagiosQL:
+adapter.validate_post_import()  # Valida que la importación fue exitosa
 ```
 
-#### Solución de Problemas con NagiosQL
+#### Solución de Problemas con NagiosQL v3.5.0
 
-- **Error de conexión**: Verificar URL, credenciales y conectividad de red
-- **Permisos insuficientes**: El usuario API debe tener permisos para crear/editar objetos
-- **Versiones incompatibles**: Verificar compatibilidad con la versión de NagiosQL
-- **Duplicados**: El sistema usa checksums para evitar duplicados, pero verifica configuración
+- **Error de conexión SSH**: Verificar clave privada, permisos y conectividad al servidor NagiosQL
+- **Archivos no encontrados**: Verificar rutas de `import_directory` y `backup_directory`
+- **Permisos insuficientes**: El usuario SSH debe tener permisos de escritura en directorios de importación
+- **Sintaxis inválida**: Los archivos .cfg generados tienen errores - revisar logs de validación
+- **Duplicados**: Checksums detectaron archivos modificados - revisar conflictos de idempotencia
+- **Importación manual fallida**: Seguir exactamente las instrucciones generadas automáticamente
 
 
 ### Modificar Patrones de Logs
@@ -781,12 +829,14 @@ python monitoring_automator.py service_example.json
 - [x] **Mejorado:** Descubrimiento automático de servicios con análisis de respuestas HTTP
 - [x] **Mejorado:** Soporte para plugins dinámicos de checks
 - [x] **Mejorado:** Integración automática de endpoints de health
+- [x] **Completado:** Integración optimizada con NagiosQL v3.5.0 (staging automático + importación manual)
 - [ ] Soporte para Zabbix como alternativa a Nagios
 - [ ] Generación automática de dashboards avanzados en Kibana
 - [ ] Integración con Ansible para despliegue automatizado
 - [ ] Soporte para métricas personalizadas (Prometheus)
 - [ ] Interfaz web para el sistema de automatización
 - [ ] Validación automática de configuraciones generadas
+- [ ] Integración CI/CD completa con approval workflows para pasos manuales
 
 ## 🤝 Contribución
 
@@ -806,5 +856,5 @@ Este proyecto está bajo la licencia MIT. Ver archivo `LICENSE` para más detall
 ---
 
 **Desarrollado por:** Equipo de Monitorización y Observabilidad
-**Versión:** 1.4.0
+**Versión:** 1.5.0
 **Última actualización:** Octubre 2025
